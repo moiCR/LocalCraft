@@ -105,9 +105,8 @@ pub async fn create_server(
     state: State<'_, ServerManager>,
     handle: AppHandle, 
 ) -> Result<Server, String> {
-    let new_server = Server::create(name, version, software, java_version, ram)?;
+    let new_server = Server::create(&handle, name, version, software, java_version, ram).await?;
     JavaManager::install_java(&handle, &new_server).await?;
     state.add_server(new_server.clone());
-
     Ok(new_server)
 }

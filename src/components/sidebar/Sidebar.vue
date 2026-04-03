@@ -83,17 +83,8 @@ const leave = (el: Element, done: () => void) => {
             </div>
         </header>
 
-        <nav class="flex flex-col flex-1 overflow-x-hidden p-4 mt-4">
-            <span 
-                class="text-[10px] font-bold text-gray-500 mb-4 transition-opacity duration-200"
-                :class="isOpen ? 'opacity-100 ml-2' : 'text-center'"
-            >
-                MAIN
-            </span>
-            
-            <div class="flex flex-col gap-3">
-                <slot />
-            </div>
+        <nav class="flex flex-col flex-1 overflow-x-hidden p-4 space-y-2">
+            <slot />
         </nav>
     </aside>
 </template>

@@ -8,6 +8,29 @@ use directories::ProjectDirs;
 use server::server_manager::{create_server, delete_server, get_servers, load_servers, ServerManager};
 
 
+#[tauri::command]
+fn get_installed_java() -> Result<Vec<String>, String> {
+    let proj_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
+        .ok_or("No se pudo calcular la ruta de la aplicación")?;
+    let java_dir = proj_dirs.data_dir().join("java");
+
+    if !java_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut versions = Vec::new();
+    if let Ok(entries) = fs::read_dir(java_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            if entry.path().is_dir() {
+                if let Some(name) = entry.file_name().to_str() {
+                    versions.push(name.to_string());
+                }
+            }
+        }
+    }
+    Ok(versions)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 
@@ -29,7 +52,8 @@ pub fn run() {
             load_servers,
             get_servers,
             delete_server,
-            create_server
+            create_server,
+            get_installed_java
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

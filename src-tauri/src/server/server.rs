@@ -1,7 +1,10 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
 use std::fs;
 use uuid::Uuid;
+
+use crate::{server::server_manager::ProgressPayload, software::software_manager::SoftwareManager};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Server {
@@ -14,7 +17,8 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn create(
+    pub async fn create(
+        handle : &AppHandle,
         name: String,
         version: String,
         software: String,
@@ -45,6 +49,15 @@ impl Server {
 
         fs::write(server_dir.join("eula.txt"), "eula=true\n")
             .map_err(|e| format!("Error al crear eula.txt: {}", e))?;
+
+        if server.software == "paper" {
+            SoftwareManager::get_paper_jar(handle, &server).await?;
+        }
+
+        let _ = handle.emit("creation-progress", ProgressPayload {
+            process: "Server created successfully.".to_string(),
+            percentage: Some(100.0),
+        });
 
         Ok(server)
     }

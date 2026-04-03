@@ -18,6 +18,16 @@ const router = createRouter({
                     path: "servers",
                     name: "Servers",
                     component: () => import("../views/ServersView.vue")
+                },
+                {
+                    path: "java",
+                    name: "Java",
+                    component: () => import("../views/JavaView.vue")
+                },
+                {
+                    path: "about",
+                    name: "About",
+                    component: () => import("../views/AboutView.vue")
                 }
             ],
         },

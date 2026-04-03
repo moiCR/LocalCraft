@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted, nextTick, computed } from 'vue';
+import { ref, watch, onUnmounted, nextTick, computed, onMounted } from 'vue';
 import gsap from 'gsap';
 
 interface Props {
@@ -19,6 +19,25 @@ const isAnchored = computed(() => !!props.anchorEl);
 
 const updatePosition = () => {
   if (!props.isOpen || !modalRef.value) return;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const isMobile = vw < 768;
+
+  if (isMobile) {
+    positionStyle.value = {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      maxHeight: '100vh',
+      margin: '0',
+      borderRadius: '0',
+      overflowY: 'auto',
+    };
+    return;
+  }
+
   const anchorRect = props.anchorEl?.getBoundingClientRect();
 
   if (!anchorRect) {
@@ -28,15 +47,14 @@ const updatePosition = () => {
       height: 'fit-content',
       margin: 'auto',
       maxHeight: '90vh',
+      borderRadius: '12px',
       overflowY: 'auto',
     };
     return;
   }
 
   const PAD = 12;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
+  
   modalRef.value.style.width = '';
   modalRef.value.style.height = '';
   
@@ -70,6 +88,7 @@ const updatePosition = () => {
     width: `${modalW}px`,
     height: `${modalH}px`,
     maxHeight: `calc(100vh - ${PAD * 2}px)`,
+    borderRadius: '12px',
     overflowY: "auto",
   };
 };
@@ -104,8 +123,13 @@ watch(() => props.isOpen, (open) => {
   }
 });
 
+onMounted(() => {
+  window.addEventListener("resize", updatePosition);
+});
+
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("resize", updatePosition);
   document.body.style.overflow = prevOverflow;
   document.body.style.paddingRight = prevPaddingRight;
 });
@@ -247,10 +271,10 @@ export default {
         v-if="isOpen"
         ref="modalRef"
         v-bind="$attrs"
-        :style="[{ borderRadius: '12px' }, positionStyle]"
+        :style="positionStyle"
         :class="[
           'absolute z-50 bg-white dark:bg-[#181818] shadow-2xl overflow-hidden', 
-          !isAnchored ? 'min-w-[400px]' : 'min-w-[192px]',
+          !isAnchored ? 'w-full md:min-w-[400px] md:w-auto' : 'w-full md:min-w-[192px] md:w-auto',
           $attrs.class
         ]"
       >

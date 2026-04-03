@@ -140,7 +140,6 @@ const handleCreate = async () => {
     progressMsg.value = 'Contacting backend...';
     progressPct.value = 0;
 
-    // Listen for progress updates
     const unlistenFn = await listen<ProgressPayload>('creation-progress', (event) => {
         progressMsg.value = event.payload.process;
         if (event.payload.percentage !== null) {

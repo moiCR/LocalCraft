@@ -40,9 +40,12 @@ onMounted(() => {
 <template>
     <div class="w-full h-full flex flex-col gap-4">
         <header class="flex flex-row justify-between items-center">
-            <section class="flex flex-row items-center gap-2">
-                <ServerIcon :size="24"/>
-                <h1 class="text-3xl font-bold">Your Servers</h1>
+            <section class="flex flex-col gap-1">
+                <div class="flex flex-row items-center gap-3">
+                    <ServerIcon :size="32" class="text-brand" />
+                    <h1 class="text-4xl font-black tracking-tight text-white">Your Servers</h1>
+                </div>
+                <p class="text-white/40 text-sm ml-11 font-medium">Manage and monitor your Minecraft instances from one central hub.</p>
             </section>
             <section class="flex flex-row items-center gap-2">
                 <Button ref="createBtnEl" :tooltip="'Create a new server'" :tooltip-position="'bottom'" @click="showCreateModal = true" >
@@ -56,7 +59,7 @@ onMounted(() => {
 
         <div 
             class="w-full h-full bg-[#161616] rounded-xl p-6 overflow-y-auto min-h-0" 
-            :class="(isLoading || servers.length === 0) ? 'flex items-center justify-center' : 'grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-4 auto-rows-max content-start'"
+            :class="(isLoading || servers.length === 0) ? 'flex items-center justify-center' : 'flex flex-col gap-3 content-start'"
         >
             <Loader v-if="isLoading" />
             <div v-else-if="servers.length === 0" class="flex flex-col items-center justify-center gap-3">
@@ -69,6 +72,6 @@ onMounted(() => {
     <ServerCreateModal
         :is-open="showCreateModal"
         :anchor-el="(createBtnEl as any)?.$el ?? createBtnEl"
-        @close="showCreateModal = false; loadServers();"
+        @close="showCreateModal = false"
     />
 </template>
