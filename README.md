@@ -1,4 +1,4 @@
-# 🏗️ LocalCraft - Vue Edition
+# 🏗️ LocalCraft
 
 <div align="center">
   <img src="icon.png" width="128" height="128" alt="LocalCraft Logo">
@@ -14,10 +14,6 @@
 ## ✨ Introduction
 
 LocalCraft is a desktop application designed to simplify the process of hosting and managing Minecraft servers locally. Leveraging the power of **Tauri** for a lightweight backend and **Vue 3** for a sleek, responsive UI, it provides a premium experience for both casual players and power users.
-
-<!-- [ESPACIO PARA CAPTURA: Hero Image - Una toma de la pantalla principal con varios servidores ya creados] -->
-> [!TIP]
-> **Captura sugerida:** Toma una captura de la pantalla de inicio donde se vean las tarjetas de los servidores creados (`ServerItem.vue`) con sus iconos y nombres.
 
 ## 🚀 Características Actuales
 
