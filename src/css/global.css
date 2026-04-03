@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "tailwind-animations";
+
+@theme {
+  --color-brand: #00ff88;
+  --color-background: #121212;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+  height: 100dvh;
+  width: 100dvw;
+}
+
+html,
+body {
+  background: var(--color-background);
+  color: rgb(255 255 255 / 0.8);
+  font-family: var(--font-sans);
+  height: 100dvh;
+  width: 100dvw;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+pre,
+code,
+.console-text {
+  user-select: text;
+  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+}
