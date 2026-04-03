@@ -1,4 +1,4 @@
-# 🏗️ LocalCraft - Vue Edition
+# 🏗️ LocalCraft
 
 <div align="center">
   <img src="icon.png" width="128" height="128" alt="LocalCraft Logo">
