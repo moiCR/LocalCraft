@@ -14,7 +14,7 @@ const props = defineProps<Props>();
 const router = useRouter();
 
 const navigateTo = () => {
-    router.push(props.to);
+    router.push({ name: props.to });
 };
 </script>
 

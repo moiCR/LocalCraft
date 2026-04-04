@@ -5,7 +5,7 @@ mod software;
 use std::fs;
 
 use directories::ProjectDirs;
-use server::server_manager::{create_server, delete_server, get_servers, load_servers, ServerManager};
+use server::server_manager::{create_server, delete_server, get_servers, load_servers, get_server, ServerManager};
 
 
 #[tauri::command]
@@ -53,7 +53,8 @@ pub fn run() {
             get_servers,
             delete_server,
             create_server,
-            get_installed_java
+            get_installed_java,
+            get_server
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

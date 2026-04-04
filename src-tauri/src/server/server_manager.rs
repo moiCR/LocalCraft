@@ -110,3 +110,9 @@ pub async fn create_server(
     state.add_server(new_server.clone());
     Ok(new_server)
 }
+
+#[tauri::command]
+pub fn get_server(id: String, state: State<'_, ServerManager>) -> Result<Server, String> {
+    let servers = state.servers.read().unwrap();
+    servers.get(&id).cloned().ok_or("Server no encontrado".to_string())
+}

@@ -11,12 +11,24 @@ const toggleMaximize = () => appWindow.toggleMaximize();
 const close = () => appWindow.close();
 const route = useRoute();
 
-const subtitle = computed(() => {
-    switch (route.path) {
-        case '/': return 'Home';
-        case '/servers': return 'Servers';
-        case '/java': return 'Java';
-        case '/about': return 'About';
+const isServerRoute = computed(() => route.name?.toString().startsWith('server-'));
+
+const baseTitle = computed(() => {
+    if (isServerRoute.value) return 'Manage Server';
+    switch (route.name) {
+        case 'home': return 'Home';
+        case 'servers': return 'Servers';
+        case 'java': return 'Java';
+        case 'about': return 'About';
+        default: return '';
+    }
+});
+
+const subTitle = computed(() => {
+    switch (route.name) {
+        case 'server-console': return 'Console';
+        case 'server-files': return 'Files';
+        case 'server-mods': return 'Mods';
         default: return '';
     }
 });
@@ -30,8 +42,13 @@ const subtitle = computed(() => {
         <div data-tauri-drag-region class="pl-4 gap-2 text-xs text-gray-500 font-bold tracking-widest flex items-center h-full w-full">
             <section class="flex items-center">
                 <span>LocalCraft</span>
+                <span v-if="baseTitle" class="ml-1 opacity-60"> | </span>
                 <Transition name="title-fade" mode="out-in">
-                    <span :key="route.path" v-if="subtitle" class="ml-2 opacity-60"> - {{ subtitle }}</span>
+                    <span :key="baseTitle" v-if="baseTitle" class="ml-2 opacity-60"> {{ baseTitle }}</span>
+                </Transition>
+                <span v-if="subTitle" class="ml-1 opacity-60"> | </span>
+                <Transition name="title-fade" mode="out-in">
+                    <span :key="subTitle" v-if="subTitle" class="ml-1 opacity-60"> {{ subTitle }}</span>
                 </Transition>
             </section>
         </div>

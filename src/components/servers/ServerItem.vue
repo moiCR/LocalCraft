@@ -42,11 +42,10 @@ defineProps<{
             </div>
         </div>
 
-        <!-- Action/Status Arrow or something (Optional) -->
         <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pr-2">
-             <div class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/50">
+             <RouterLink :to="{ name: 'server-console', params: { id: server.id } }" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/50">
                 <span class="text-xl">›</span>
-             </div>
+             </RouterLink>
         </div>
     </div>
 </template>

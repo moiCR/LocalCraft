@@ -34,7 +34,8 @@ export default {
       :disabled="disabled"
       v-bind="$attrs"
       :class="[
-        'relative z-10 cursor-pointer font-bold text-white dark:text-black bg-black dark:bg-white px-4 py-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+        'relative z-10 cursor-pointer font-bold px-4 py-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+        !(($attrs.class as string)?.includes('bg-')) ? 'text-white dark:text-black bg-black dark:bg-white' : '',
         disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-x-105 hover:scale-y-[0.95]',
         $attrs.class
       ]"
