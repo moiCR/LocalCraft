@@ -33,12 +33,12 @@ Esta es nuestra hoja de ruta para alcanzar la versión 1.0.
 - [x] Panel principal de visualización de servidores.
 
 ### 🚧 En Desarrollo / Próximamente
-- [ ] **Manejo del Ciclo de Vida del Servidor**:
-  - [ ] Botones de Iniciar, Detener y Reiniciar.
-  - [ ] Estado del proceso (Running/Stopped).
-- [ ] **Consola en Tiempo Real**:
-  - [ ] Stream de logs directamente desde el proceso del servidor.
-  - [ ] Input de comandos hacia la consola.
+- [x] **Manejo del Ciclo de Vida del Servidor**:
+  - [x] Botones de Iniciar, Detener y Reiniciar.
+  - [x] Estado del proceso (Running/Stopped).
+- [x] **Consola en Tiempo Real**:
+  - [x] Stream de logs directamente desde el proceso del servidor.
+  - [x] Input de comandos hacia la consola.
 - [ ] **Gestor de Archivos**:
   - [ ] Explorador de archivos integrado.
   - [ ] Editor de texto para archivos `.properties`, `.yml`, `.json`.
