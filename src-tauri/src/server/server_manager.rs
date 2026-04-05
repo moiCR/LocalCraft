@@ -60,6 +60,45 @@ impl ServerManager {
         }
         Ok(())
     }
+
+    pub async fn shutdown_all_servers(&self) {
+        let servers = self.get_all_servers();
+        let mut shutdown_tasks = Vec::new();
+
+        for server in servers {
+            let running = {
+                let guard = server.running.lock().await;
+                guard.is_some()
+            };
+            if running {
+                println!("Deteniendo servidor: {}", server.name);
+                let _ = server.send_command("stop".to_string()).await;
+                let s = server.clone();
+                shutdown_tasks.push(tokio::spawn(async move {
+                    s.wait_until_stopped().await;
+                    println!("Servidor {} detenido.", s.name);
+                }));
+            }
+        }
+
+        for task in shutdown_tasks {
+            let _ = task.await;
+        }
+    }
+}
+#[tauri::command]
+pub async fn start_server(id: String, state: State<'_, ServerManager>, handle: AppHandle) -> Result<(), String> {
+    let server = {
+        let servers = state.servers.read().unwrap();
+        servers.get(&id).cloned()
+    };
+    
+    if let Some(server) = server {
+        server.start(&handle).await?;
+        Ok(())
+    } else {
+        Err("Server not found".to_string())
+    }
 }
 
 #[tauri::command]
@@ -80,14 +119,14 @@ pub fn get_servers(state: State<'_, ServerManager>) -> Result<Vec<Server>, Strin
 }
 
 #[tauri::command]
-pub fn delete_server(id: String, state: State<'_, ServerManager>) -> Result<(), String> {
+pub async fn delete_server(id: String, state: State<'_, ServerManager>) -> Result<(), String> {
     let server_opt = {
         let servers = state.servers.read().unwrap();
         servers.get(&id).cloned()
     };
     
     if let Some(server) = server_opt {
-        server.delete()?;
+        server.delete().await?;
         state.remove_server(&id);
         Ok(())
     } else {
@@ -115,4 +154,35 @@ pub async fn create_server(
 pub fn get_server(id: String, state: State<'_, ServerManager>) -> Result<Server, String> {
     let servers = state.servers.read().unwrap();
     servers.get(&id).cloned().ok_or("Server no encontrado".to_string())
+}
+
+
+#[tauri::command]
+pub async fn send_command(id: String, command: String, state: State<'_, ServerManager>) -> Result<(), String> {
+    let server = {
+        let servers = state.servers.read().unwrap();
+        servers.get(&id).cloned()
+    };
+    
+    if let Some(server) = server {
+        server.send_command(command).await?;
+        Ok(())
+    } else {
+        Err("Server not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn is_server_running(id: String, state: State<'_, ServerManager>) -> Result<bool, String> {
+    let server = {
+        let servers = state.servers.read().unwrap();
+        servers.get(&id).cloned()
+    };
+    
+    if let Some(server) = server {
+        let guard = server.running.lock().await;
+        Ok(guard.is_some())
+    } else {
+        Err("Server not found".to_string())
+    }
 }
