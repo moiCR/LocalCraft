@@ -15,49 +15,50 @@
 
 LocalCraft is a desktop application designed to simplify the process of hosting and managing Minecraft servers locally. Leveraging the power of **Tauri** for a lightweight backend and **Vue 3** for a sleek, responsive UI, it provides a premium experience for both casual players and power users.
 
-## 🚀 Características Actuales
+## 🚀 Current Features
 
-- **Gestión de Java**: Detección y descarga automática de diferentes versiones de JRE.
-- **Creación de Servidores**: Wizard intuitivo para configurar software (Vanilla, Paper, Fabric, etc.) y versiones.
-- **Interfaz Moderna**: Animaciones fluidas con GSAP y diseño minimalista.
-- **Multi-plataforma**: Compatible con Linux, Windows y macOS gracias a Tauri.
+- **Java Management**: Automatic detection and download of different JRE versions.
+- **Server Creation**: Intuitive wizard to configure software (Vanilla, Paper, Fabric, etc.) and versions.
+- **Modern Interface**: Fluid animations with GSAP and minimalist design.
+- **Cross-platform**: Compatible with Linux, Windows, and macOS thanks to Tauri.
 
 ## 🗺️ Roadmap
 
-Esta es nuestra hoja de ruta para alcanzar la versión 1.0.
+This is our roadmap to reach version 1.0.
 
-### ✅ Completado
-- [x] Estructura base con Tauri and Vue 3.
-- [x] Sistema de gestión de Java (Java Manager).
-- [x] Interfaz de creación de servidores (`ServerCreateModal`).
-- [x] Panel principal de visualización de servidores.
+### ✅ Completed
+- [x] Base structure with Tauri and Vue 3.
+- [x] Java management system (Java Manager).
+- [x] Server creation interface (`ServerCreateModal`).
+- [x] Main server display dashboard.
 
-### 🚧 En Desarrollo / Próximamente
-- [x] **Manejo del Ciclo de Vida del Servidor**:
-  - [x] Botones de Iniciar, Detener y Reiniciar.
-  - [x] Estado del proceso (Running/Stopped).
-- [x] **Consola en Tiempo Real**:
-  - [x] Stream de logs directamente desde el proceso del servidor.
-  - [x] Input de comandos hacia la consola.
-- [ ] **Gestor de Archivos**:
-  - [ ] Explorador de archivos integrado.
-  - [ ] Editor de texto para archivos `.properties`, `.yml`, `.json`.
-- [ ] **Sección de Mods/Plugins**:
-  - [ ] Integración con la API de **Modrinth**.
-  - [ ] Integración con la API de **CurseForge**.
-  - [ ] Instalación con un solo clic.
+### 🚧 In Development / Coming Soon
+- [x] **Server Lifecycle Management**:
+  - [x] Start, Stop, and Restart buttons.
+  - [x] Process state (Running/Stopped).
+- [x] **Real-time Console**:
+  - [x] Log stream directly from the server process.
+  - [x] Command input to the console.
+- [ ] **File Manager**:
+  - [ ] Integrated file explorer.
+  - [ ] Text editor for `.properties`, `.yml`, `.json` files.
+- [ ] **Mods/Plugins Section**:
+  - [ ] Integration with the **Modrinth** API.
+  - [ ] Integration with the **CurseForge** API.
+  - [ ] One-click installation.
 
 ---
 
-## 📸 Galería de Imágenes
+## 📸 Image Gallery
 
-A continuación, se muestran los componentes clave de la aplicación:
+Below are the key components of the application:
 
-| Componente | Captura de Pantalla |
+| Component | Screenshot |
 | :--- | :--- |
-| **Panel de Control** | ![Dashboard](public/servers_dashboard.png) |
-| **Creación de Servidor** | ![Modal de Creación](public/servers_dashboard_with_modal.png) |
-| **Configuración de Java** | (Próximamente) |
+| **Dashboard** | ![Dashboard](public/servers_dashboard.png) |
+| **Server Creation** | ![Creation Modal](public/servers_dashboard_with_modal.png) |
+| **Java Configuration** | (Coming Soon) |
+
 ---
 
 ## 🛠️ Tech Stack
@@ -66,21 +67,21 @@ A continuación, se muestran los componentes clave de la aplicación:
 - **Styling**: Vanilla CSS / Scoped CSS
 - **Backend/Native**: [Tauri](https://tauri.app/) (Rust)
 - **Animations**: [GSAP](https://greensock.com/gsap/)
-- **Icons**: SVG Internos + Lucide-Vue
+- **Icons**: Internal SVGs + Lucide-Vue
 
-## 📦 Instalación (Desarrollo)
+## 📦 Installation (Development)
 
-Para ejecutar el proyecto localmente:
+To run the project locally:
 
-1.  **Clonar el repositorio:**
+1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/localcraft-vuew.git
+    git clone [https://github.com/your-username/localcraft-vuew.git](https://github.com/your-username/localcraft-vuew.git)
     ```
-2.  **Instalar dependencias:**
+2.  **Install dependencies:**
     ```bash
     bun install
     ```
-3.  **Ejecutar en modo dev:**
+3.  **Run in dev mode:**
     ```bash
     bun tauri dev
     ```
@@ -88,5 +89,5 @@ Para ejecutar el proyecto localmente:
 ---
 
 <div align="center">
-  Hecho con ❤️ por Moisés Marenco Vives
+  Made with ❤️ by Moisés Marenco Vives
 </div>
