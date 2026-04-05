@@ -46,9 +46,6 @@ Esta es nuestra hoja de ruta para alcanzar la versión 1.0.
   - [ ] Integración con la API de **Modrinth**.
   - [ ] Integración con la API de **CurseForge**.
   - [ ] Instalación con un solo clic.
-- [ ] **Distribución en Flathub**:
-  - [ ] Compilación y empaquetado para Linux via Flatpak.
-  - [ ] Publicación en la tienda oficial de Flathub.
 
 ---
 
