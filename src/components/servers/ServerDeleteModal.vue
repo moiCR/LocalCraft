@@ -4,7 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { RefreshCcw, AlertTriangle } from '@lucide/vue';
 import Button from '../ui/Button.vue';
 import Modal from '../ui/Modal.vue';
-import { useRouter } from 'vue-router';
 
 interface Server {
     id: string;
@@ -22,8 +21,11 @@ const props = defineProps<{
     anchorEl?: HTMLElement | null;
 }>();
 
+const emit = defineEmits<{
+    (e: 'deleted'): void;
+}>();
+
 const isDeleting = ref(false);
-const router = useRouter();
 
 const handleDelete = async () => {
     isDeleting.value = true;
@@ -33,7 +35,7 @@ const handleDelete = async () => {
         setTimeout(() => {
             props.onClose?.();
             isDeleting.value = false;
-            router.push({ name: 'servers' });
+            emit('deleted');
         }, 800);
     }).catch((error) => {
         console.error(error);

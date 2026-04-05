@@ -65,7 +65,7 @@ onMounted(() => {
             <div v-else-if="servers.length === 0" class="flex flex-col items-center justify-center gap-3">
                 <span class="text-sm font-semibold text-gray-400 animate-pulse tracking-widest uppercase mt-2">No servers found</span>
             </div>
-            <ServerItem v-else v-for="server in servers" :key="server.id" :server="server" />
+            <ServerItem v-else v-for="server in servers" :key="server.id" :server="server" @deleted="loadServers" />
         </div>
     </div>
 
@@ -73,5 +73,6 @@ onMounted(() => {
         :is-open="showCreateModal"
         :anchor-el="(createBtnEl as any)?.$el ?? createBtnEl"
         @close="showCreateModal = false"
+        @created="loadServers"
     />
 </template>

@@ -2,6 +2,7 @@
 import { ref, watch, onUnmounted } from 'vue';
 import { Loader2, Plus, ServerIcon } from '@lucide/vue';
 import Modal from '../ui/Modal.vue';
+import Select from '../ui/Select.vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
@@ -17,6 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'close'): void;
+    (e: 'created'): void;
 }>();
 
 const ramOptions = [
@@ -157,6 +159,7 @@ const handleCreate = async () => {
             ram: ram.value,
         });
         
+        emit('created');
         handleClose();
     } catch (err: any) {
         error.value = err.toString();
@@ -175,18 +178,18 @@ const handleCreate = async () => {
         :is-open="isOpen" 
         :anchor-el="anchorEl" 
         layout-id="server-create-modal" 
-        :width="320"
-        :height="300"
+        :width="680"
+        :height="480"
         @close="handleClose"
     >
-        <div class="flex flex-col p-4 gap-4">
+        <div class="flex flex-col p-6 gap-6">
             <!-- Header -->
-            <h3 class="text-sm font-bold text-black dark:text-white tracking-tight transition-all">
+            <h3 class="text-base font-bold text-black dark:text-white tracking-tight transition-all">
                 {{ isCreating ? 'Creating Server' : 'New Server' }}
             </h3>
 
             <!-- Form View -->
-            <div v-if="!isCreating" class="flex flex-col gap-4">
+            <div v-if="!isCreating" class="flex flex-col gap-5">
                 <!-- Name -->
                 <div class="flex flex-col gap-1.5">
                     <label for="create-name" class="text-xs font-medium text-gray-500 dark:text-gray-400">Name</label>
@@ -201,59 +204,43 @@ const handleCreate = async () => {
 
                 <!-- Software & Version -->
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Software</label>
-                        <select
-                            v-model="software"
-                            class="border border-black/5 bg-black/2 text-black text-sm dark:border-white/5 dark:bg-white/2 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all appearance-none cursor-pointer"
-                        >
-                            <option v-for="opt in softwareOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Version</label>
-                        <select
-                            v-model="version"
-                            :disabled="isLoading || versionOptions.length === 0"
-                            class="border border-black/5 bg-black/2 text-black text-sm dark:border-white/5 dark:bg-white/2 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="" disabled>{{ isLoading ? 'Loading...' : 'Version' }}</option>
-                            <option v-for="opt in versionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                    </div>
+                    <Select
+                        v-model="software"
+                        :options="softwareOptions"
+                        label="Software"
+                    />
+                    <Select
+                        v-model="version"
+                        :options="versionOptions"
+                        :disabled="isLoading || versionOptions.length === 0"
+                        label="Version"
+                        :placeholder="isLoading ? 'Loading...' : 'Version'"
+                    />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Java</label>
-                        <select
-                            v-model="javaVersion"
-                            :disabled="javaVersionOptions.length === 0"
-                            class="border border-black/5 bg-black/2 text-black text-sm dark:border-white/5 dark:bg-white/2 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="" disabled>{{ javaVersionOptions.length === 0 ? 'Loading...' : 'Java' }}</option>
-                            <option v-for="opt in javaVersionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">RAM</label>
-                        <select
-                            v-model="ram"
-                            class="border border-black/5 bg-black/2 text-black text-sm dark:border-white/5 dark:bg-white/2 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all appearance-none cursor-pointer"
-                        >
-                            <option v-for="opt in ramOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                    </div>
+                    <Select
+                        v-model="javaVersion"
+                        :options="javaVersionOptions"
+                        :disabled="javaVersionOptions.length === 0"
+                        label="Java"
+                        :placeholder="javaVersionOptions.length === 0 ? 'Loading...' : 'Java'"
+                    />
+                    <Select
+                        v-model="ram"
+                        :options="ramOptions"
+                        label="RAM"
+                    />
                 </div>
 
                 <p v-if="error" class="text-xs text-red-500 font-medium">{{ error }}</p>
 
-                <div class="flex gap-2 pt-1">
+                <div class="flex gap-3 pt-2">
                     <button
                         type="button"
                         :disabled="isLoading"
                         @click="handleClose"
-                        class="flex-1 text-xs font-medium py-2 px-3 rounded-lg text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
+                        class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
                     >
                         Cancel
                     </button>
@@ -261,7 +248,7 @@ const handleCreate = async () => {
                         type="button"
                         :disabled="isLoading || !canCreate()"
                         @click="handleCreate"
-                        class="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                     >
                         <Loader2 v-if="isLoading" :size="12" class="animate-spin" />
                         <Plus v-else :size="12" />
