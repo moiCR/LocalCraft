@@ -75,7 +75,7 @@ To run the project locally:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/localcraft-vuew.git](https://github.com/your-username/localcraft-vuew.git)
+    git clone https://github.com/moiCR/LocalCraft.git
     ```
 2.  **Install dependencies:**
     ```bash
