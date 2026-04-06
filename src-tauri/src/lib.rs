@@ -1,25 +1,22 @@
-mod server;
+mod file;
 mod java;
+mod server;
 mod software;
 
 use std::fs;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
-use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent};
-use tauri::{Manager, WindowEvent, Emitter};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
 use directories::ProjectDirs;
-use server::server_manager::{
-    create_server,
-    delete_server, 
-    get_servers, 
-    load_servers, 
-    get_server, 
-    start_server, 
-    send_command, 
-    is_server_running,
-    ServerManager
+use file::file_manager::{
+    create_dir, delete_dir, delete_file, read_dir, read_file, rename_file, save_file_binary,
+    write_file,
 };
-
+use server::server_manager::{
+    create_server, delete_server, get_server, get_servers, is_server_running, load_servers,
+    open_folder, send_command, start_server, ServerManager,
+};
 
 #[tauri::command]
 fn get_installed_java() -> Result<Vec<String>, String> {
@@ -46,7 +43,6 @@ fn get_installed_java() -> Result<Vec<String>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
     #[cfg(target_os = "linux")]
     {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
@@ -63,22 +59,26 @@ pub fn run() {
         .plugin(tauri_plugin_prevent_default::init())
         .setup(|app| {
             let handle = app.handle();
-            
+
             let item_home = MenuItem::with_id(app, "home", "Home", true, None::<&str>)?;
             let item_servers = MenuItem::with_id(app, "servers", "Servers", true, None::<&str>)?;
-            let item_java = MenuItem::with_id(app, "java", "Java Environments", true, None::<&str>)?;
+            let item_java =
+                MenuItem::with_id(app, "java", "Java Environments", true, None::<&str>)?;
             let item_about = MenuItem::with_id(app, "about", "About", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let item_quit = MenuItem::with_id(app, "quit", "Quit / Cerrar", true, None::<&str>)?;
 
-            let menu = Menu::with_items(app, &[
-                &item_home,
-                &item_servers,
-                &item_java,
-                &item_about,
-                &separator,
-                &item_quit
-            ])?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &item_home,
+                    &item_servers,
+                    &item_java,
+                    &item_about,
+                    &separator,
+                    &item_quit,
+                ],
+            )?;
 
             let icon = app.default_window_icon().unwrap().clone();
 
@@ -110,7 +110,8 @@ pub fn run() {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
                         ..
-                    } = event {
+                    } = event
+                    {
                         if let Some(window) = tray.app_handle().get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
@@ -137,12 +138,20 @@ pub fn run() {
             get_server,
             start_server,
             send_command,
-            is_server_running
+            is_server_running,
+            open_folder,
+            read_dir,
+            read_file,
+            write_file,
+            delete_file,
+            create_dir,
+            delete_dir,
+            rename_file,
+            save_file_binary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
 
 pub fn ensure_app_dirs() -> Result<std::path::PathBuf, String> {
     let proj_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")

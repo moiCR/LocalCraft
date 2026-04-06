@@ -40,8 +40,8 @@ This is our roadmap to reach version 1.0.
   - [x] Log stream directly from the server process.
   - [x] Command input to the console.
 - [ ] **File Manager**:
-  - [ ] Integrated file explorer.
-  - [ ] Text editor for `.properties`, `.yml`, `.json` files.
+  - [x] Integrated file explorer.
+  - [x] Text editor for `.properties`, `.yml`, `.json` files.
 - [ ] **Mods/Plugins Section**:
   - [ ] Integration with the **Modrinth** API.
   - [ ] Integration with the **CurseForge** API.

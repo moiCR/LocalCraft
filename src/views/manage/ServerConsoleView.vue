@@ -13,6 +13,12 @@ const serverID = route.params.id as string;
 
 const logsContainerRef = ref<HTMLDivElement | null>(null);
 
+const scrollToBottom = () => {
+    if (logsContainerRef.value) {
+        logsContainerRef.value.scrollTop = logsContainerRef.value.scrollHeight;
+    }
+};
+
 const serverLogs = computed(() => globalLogsCache[serverID] || []);
 
 const isActive = ref(false);
@@ -23,6 +29,9 @@ let unlistenStopped: UnlistenFn | null = null;
 onMounted(async () => {
     startGlobalListener();
     isActive.value = await invoke('is_server_running', { id: serverID });
+    
+    await nextTick();
+    scrollToBottom();
     
     unlistenStopped = await listen('server-stopped', async (event) => {
         if (event.payload === serverID) {
@@ -42,9 +51,7 @@ onUnmounted(() => {
 
 watch(serverLogs, async () => {
     await nextTick();
-    if (logsContainerRef.value) {
-        logsContainerRef.value.scrollTop = logsContainerRef.value.scrollHeight;
-    }
+    scrollToBottom();
 }, { deep: true });
 
 const startServer = async () => {

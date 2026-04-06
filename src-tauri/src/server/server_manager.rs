@@ -186,3 +186,46 @@ pub async fn is_server_running(id: String, state: State<'_, ServerManager>) -> R
         Err("Server not found".to_string())
     }
 }
+
+#[tauri::command]
+pub fn open_folder(
+    server_id: String,
+    path: Option<String>,
+    state: State<'_, ServerManager>,
+) -> Result<(), String> {
+    let server = {
+        let servers = state.servers.read().unwrap();
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
+    };
+
+    let mut full_path = server.get_path()?;
+
+    if let Some(sub_path) = path {
+        full_path = full_path.join(sub_path);
+    }
+
+    if !full_path.exists() {
+        return Err("La ruta no existe".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer")
+        .arg(&full_path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg(&full_path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open")
+        .arg(&full_path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}

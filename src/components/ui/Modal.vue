@@ -189,7 +189,7 @@ const onEnter = async (el: Element, done: () => void) => {
   } else {
     gsap.fromTo(target, 
       { scale: 0.95, opacity: 0 }, 
-      { scale: 1, opacity: 1, duration: 0., ease: "back.out(1.5)", onComplete: done }
+      { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(1.5)", onComplete: done }
     );
   }
 };
