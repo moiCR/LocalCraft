@@ -47,7 +47,7 @@ const updatePosition = () => {
       height: 'fit-content',
       margin: 'auto',
       maxHeight: '90vh',
-      borderRadius: '12px',
+      borderRadius: '24px',
       overflowY: 'auto',
     };
     return;
@@ -88,7 +88,7 @@ const updatePosition = () => {
     width: `${modalW}px`,
     height: `${modalH}px`,
     maxHeight: `calc(100vh - ${PAD * 2}px)`,
-    borderRadius: '12px',
+    borderRadius: '24px',
     overflowY: "auto",
   };
 };
@@ -168,7 +168,7 @@ const onEnter = async (el: Element, done: () => void) => {
         opacity: 1,
         backgroundColor: anchorBg,
         transformOrigin: "center center", 
-        borderRadius: "12px",
+        borderRadius: "24px",
       }, 
       {
         x: 0,
@@ -177,7 +177,7 @@ const onEnter = async (el: Element, done: () => void) => {
         scaleY: 1,
         opacity: 1,
         backgroundColor: targetBg,
-        borderRadius: "12px",
+        borderRadius: "24px",
         duration: 0.3,
         ease: "power2.out",
         onComplete: () => {
@@ -222,7 +222,7 @@ const onLeave = (el: Element, done: () => void) => {
       backgroundColor: anchorBg,
       opacity: 1,
       duration: 0.3,
-      borderRadius: "12px",
+      borderRadius: "24px",
       transformOrigin: "center center",
       ease: "power2.in",
       onComplete: done
@@ -255,7 +255,7 @@ export default {
         v-if="isOpen" 
         :class="[
           'fixed inset-0 z-40', 
-          isAnchored ? 'bg-transparent' : 'bg-black/10 dark:bg-black/20 backdrop-blur-[2px]',
+          isAnchored ? 'bg-transparent' : 'bg-black/40 backdrop-blur-[20px]',
           $attrs.class
         ]"
         @click="emit('close')"
@@ -273,8 +273,8 @@ export default {
         v-bind="$attrs"
         :style="positionStyle"
         :class="[
-          'absolute z-50 bg-white dark:bg-[#181818] shadow-2xl overflow-hidden', 
-          !isAnchored ? 'w-full md:min-w-[400px] md:w-auto' : 'w-full md:min-w-[192px] md:w-auto',
+          'absolute z-50 bg-white/70 dark:bg-[#1c1c1e]/75 backdrop-blur-md shadow-xl overflow-hidden', 
+          !isAnchored ? 'w-full md:min-w-[320px] md:w-auto rounded-[24px]' : 'w-full md:min-w-[192px] md:w-auto rounded-xl',
           $attrs.class
         ]"
       >
@@ -283,3 +283,10 @@ export default {
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+</style>

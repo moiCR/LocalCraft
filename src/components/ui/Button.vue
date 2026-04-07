@@ -41,7 +41,7 @@ export default {
       ]"
       style="border-radius: 12px;"
     >
-      <span><slot /></span>
+      <slot />
     </button>
 
     <Transition

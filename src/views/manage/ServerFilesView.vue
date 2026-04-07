@@ -8,6 +8,8 @@ import FileItem from '../../components/servers/file/FileItem.vue';
 import FileOrDirectoryRenameModal from '../../components/servers/file/FileOrDirectoryRenameModal.vue';
 import FileOrDirectoryDeleteModal from '../../components/servers/file/FileOrDirectoryDeleteModal.vue';
 import FileEditorModal from '../../components/servers/file/FileEditorModal.vue';
+import CreateItemModal from '../../components/servers/file/CreateItemModal.vue';
+import UploadModal from '../../components/servers/file/UploadModal.vue';
 
 interface FileInfo {
   name: string;
@@ -44,10 +46,11 @@ async function loadDir() {
   loading.value = true;
   error.value = null;
   try {
-    files.value = await invoke<FileInfo[]>('read_dir', {
+    const allFiles = await invoke<FileInfo[]>('read_dir', {
       serverId: serverId.value,
       subPath: currentPath.value || null,
     });
+    files.value = allFiles.filter(f => f.name !== 'server.json' && f.name !== 'java_path.txt');
   } catch (e) {
     error.value = String(e);
   } finally {
@@ -144,60 +147,50 @@ function closeDelete() {
 }
 
 const showNewFolder = ref(false);
-const newFolderName = ref('');
 const showNewFile = ref(false);
-const newFileName = ref('');
+const showUploadModal = ref(false);
+const newFolderAnchorEl = ref<HTMLElement | null>(null);
+const newFileAnchorEl = ref<HTMLElement | null>(null);
+const uploadAnchorEl = ref<HTMLElement | null>(null);
 const uploading = ref(false);
-const fileInput = ref<HTMLInputElement | null>(null);
 
-async function confirmNewFolder() {
-  if (!newFolderName.value.trim()) return;
+async function confirmNewFolder(name: string) {
   const path = currentPath.value
-    ? `${currentPath.value}/${newFolderName.value.trim()}`
-    : newFolderName.value.trim();
+    ? `${currentPath.value}/${name}`
+    : name;
   try {
     await invoke('create_dir', { serverId: serverId.value, path });
     showNewFolder.value = false;
-    newFolderName.value = '';
     await loadDir();
   } catch (e) {
     error.value = String(e);
   }
 }
 
-async function confirmNewFile() {
-  if (!newFileName.value.trim()) return;
+async function confirmNewFile(name: string) {
   const path = currentPath.value
-    ? `${currentPath.value}/${newFileName.value.trim()}`
-    : newFileName.value.trim();
+    ? `${currentPath.value}/${name}`
+    : name;
   try {
-    // Create an empty file using the binary save command
     await invoke('save_file_binary', { 
       serverId: serverId.value, 
       path, 
       data: [] 
     });
     showNewFile.value = false;
-    newFileName.value = '';
     await loadDir();
   } catch (e) {
     error.value = String(e);
   }
 }
 
-function triggerUpload() {
-  fileInput.value?.click();
-}
-
-async function handleFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
-
+async function handleUploadFiles(fileList: FileList) {
   uploading.value = true;
   error.value = null;
 
   try {
-    for (const file of Array.from(input.files)) {
+    const filesArray = Array.from(fileList);
+    for (const file of filesArray) {
       const arrayBuffer = await file.arrayBuffer();
       const data = new Uint8Array(arrayBuffer);
       
@@ -208,15 +201,15 @@ async function handleFileUpload(event: Event) {
       await invoke('save_file_binary', {
         serverId: serverId.value,
         path,
-        data: Array.from(data) // Tauri expects a normal array for Vec<u8>
+        data: Array.from(data)
       });
     }
     await loadDir();
+    showUploadModal.value = false;
   } catch (e) {
     error.value = `Upload failed: ${String(e)}`;
   } finally {
     uploading.value = false;
-    input.value = ''; // Reset input
   }
 }
 
@@ -274,7 +267,7 @@ onMounted(loadDir);
         :tooltip="'New file'"
         :tooltip-position="'bottom'"
         :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
-        @click="showNewFile = !showNewFile; showNewFolder = false"
+        @click="(e: MouseEvent) => { newFileAnchorEl = e.currentTarget as HTMLElement; showNewFile = true }"
       >
         <FilePlus :size="16" />
       </Button>
@@ -283,7 +276,7 @@ onMounted(loadDir);
         :tooltip="'New folder'"
         :tooltip-position="'bottom'"
         :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
-        @click="showNewFolder = !showNewFolder; showNewFile = false"
+        @click="(e: MouseEvent) => { newFolderAnchorEl = e.currentTarget as HTMLElement; showNewFolder = true }"
       >
         <FolderPlus :size="16" />
       </Button>
@@ -292,11 +285,9 @@ onMounted(loadDir);
         :tooltip="'Upload files'"
         :tooltip-position="'bottom'"
         :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
-        :disabled="uploading"
-        @click="triggerUpload"
+        @click="(e: MouseEvent) => { uploadAnchorEl = e.currentTarget as HTMLElement; showUploadModal = true }"
       >
-        <Upload v-if="!uploading" :size="16" />
-        <Loader2 v-else :size="16" class="animate-spin" />
+        <Upload :size="16" />
       </Button>
 
       <Button
@@ -309,76 +300,6 @@ onMounted(loadDir);
       </Button>
     </section>
 
-    <Transition
-      enter-active-class="transition-all duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition-all duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-2"
-    >
-      <div
-        v-if="showNewFolder"
-        class="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/5 shrink-0"
-      >
-        <input
-          v-model="newFolderName"
-          autofocus
-          placeholder="Folder name..."
-          class="flex-1 bg-transparent text-sm text-white placeholder-white/30 outline-none"
-          @keyup.enter="confirmNewFolder"
-          @keyup.escape="showNewFolder = false; newFolderName = ''"
-        />
-        <button
-          class="text-xs text-green-400 hover:text-green-300 font-semibold px-2 py-1 rounded transition-colors"
-          @click="confirmNewFolder"
-        >Create</button>
-        <button
-          class="text-xs text-white/40 hover:text-white/70 px-2 py-1 rounded transition-colors"
-          @click="showNewFolder = false; newFolderName = ''"
-        >Cancel</button>
-      </div>
-    </Transition>
-
-    <!-- New File Input -->
-    <Transition
-      enter-active-class="transition-all duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition-all duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-2"
-    >
-      <div
-        v-if="showNewFile"
-        class="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/5 shrink-0"
-      >
-        <input
-          v-model="newFileName"
-          autofocus
-          placeholder="File name (e.g. server.properties)..."
-          class="flex-1 bg-transparent text-sm text-white placeholder-white/30 outline-none"
-          @keyup.enter="confirmNewFile"
-          @keyup.escape="showNewFile = false; newFileName = ''"
-        />
-        <button
-          class="text-xs text-green-400 hover:text-green-300 font-semibold px-2 py-1 rounded transition-colors"
-          @click="confirmNewFile"
-        >Create</button>
-        <button
-          class="text-xs text-white/40 hover:text-white/70 px-2 py-1 rounded transition-colors"
-          @click="showNewFile = false; newFileName = ''"
-        >Cancel</button>
-      </div>
-    </Transition>
-
-    <input
-      ref="fileInput"
-      type="file"
-      multiple
-      class="hidden"
-      @change="handleFileUpload"
-    />
 
     <!-- File list -->
     <section class="flex-1 overflow-hidden p-4">
@@ -440,6 +361,35 @@ onMounted(loadDir);
       :file-path="editingFilePath"
       :server-id="serverId"
       @close="editingFileName = null; editingFilePath = null"
+    />
+
+    <!-- Create Item Modal -->
+    <CreateItemModal
+      :is-open="showNewFile"
+      :anchor-el="newFileAnchorEl"
+      layout-id="new-file-modal"
+      type="file"
+      @close="showNewFile = false; newFileAnchorEl = null"
+      @confirm="confirmNewFile"
+    />
+
+    <CreateItemModal
+      :is-open="showNewFolder"
+      :anchor-el="newFolderAnchorEl"
+      layout-id="new-folder-modal"
+      type="folder"
+      @close="showNewFolder = false; newFolderAnchorEl = null"
+      @confirm="confirmNewFolder"
+    />
+
+    <!-- Upload Modal -->
+    <UploadModal
+      :is-open="showUploadModal"
+      :anchor-el="uploadAnchorEl"
+      layout-id="upload-modal"
+      :uploading="uploading"
+      @close="showUploadModal = false; uploadAnchorEl = null"
+      @upload="handleUploadFiles"
     />
 
   </div>

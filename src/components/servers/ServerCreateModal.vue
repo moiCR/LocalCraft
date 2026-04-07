@@ -42,7 +42,7 @@ const softwareOptions = [
 const name          = ref('');
 const software      = ref('paper');
 const version       = ref('');
-const ram           = ref('2048');
+const ram           = ref('4096');
 const javaVersion   = ref('');
 const error         = ref('');
 const isLoading     = ref(false);
@@ -78,10 +78,11 @@ const fetchJavaVersions = async () => {
         const res  = await fetch('https://api.adoptium.net/v3/info/available_releases');
         const data = await res.json();
         const releases: number[] = data.available_releases || [];
-        javaVersionOptions.value = [...releases].reverse().map(v => ({ label: `Java ${v}`, value: v.toString() }));
+        
+        javaVersionOptions.value = [...releases].filter((v: number) => v != 26).reverse().map(v => ({ label: `${v}`, value: v.toString() }));
         javaVersion.value = data.most_recent_lts?.toString() ?? (releases.length ? releases[releases.length - 1].toString() : '21');
     } catch {
-        javaVersionOptions.value = [{ label: 'Java 21', value: '21' }];
+        javaVersionOptions.value = [{ label: '21', value: '21' }];
         javaVersion.value = '21';
     }
 };
@@ -97,6 +98,7 @@ const fetchVersions = async () => {
         if (software.value === 'paper') {
             const data = await (await fetch('https://api.papermc.io/v2/projects/paper')).json();
             options = [...data.versions].filter((v: string) => !v.includes('-')).reverse().map((v: string) => ({ label: v, value: v }));
+            
         } else if (software.value === 'vanilla') {
             const data = await (await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json')).json();
             options = data.versions.filter((v: any) => v.type === 'release').map((v: any) => ({ label: v.id, value: v.id }));
@@ -115,6 +117,7 @@ const fetchVersions = async () => {
         }
 
         versionOptions.value = options;
+        version.value = options[0].value;
     } catch {
         versionOptions.value = [{ label: 'Error fetching versions', value: '' }];
     } finally {

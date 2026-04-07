@@ -41,6 +41,37 @@ fn get_installed_java() -> Result<Vec<String>, String> {
     Ok(versions)
 }
 
+#[tauri::command]
+fn open_java_folder() -> Result<(), String> {
+    let proj_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
+        .ok_or("No se pudo calcular la ruta de la aplicación")?;
+    let java_dir = proj_dirs.data_dir().join("java");
+
+    if !java_dir.exists() {
+        fs::create_dir_all(&java_dir).map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer")
+        .arg(&java_dir)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg(&java_dir)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open")
+        .arg(&java_dir)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
@@ -147,7 +178,8 @@ pub fn run() {
             create_dir,
             delete_dir,
             rename_file,
-            save_file_binary
+            save_file_binary,
+            open_java_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
