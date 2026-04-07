@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::RwLock};
 use directories::ProjectDirs;
 use serde::Serialize;
+use std::{collections::HashMap, sync::RwLock};
 use tauri::{AppHandle, State};
 
 use crate::{java::java_manager::JavaManager, server::server::Server};
@@ -87,12 +87,16 @@ impl ServerManager {
     }
 }
 #[tauri::command]
-pub async fn start_server(id: String, state: State<'_, ServerManager>, handle: AppHandle) -> Result<(), String> {
+pub async fn start_server(
+    id: String,
+    state: State<'_, ServerManager>,
+    handle: AppHandle,
+) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
         servers.get(&id).cloned()
     };
-    
+
     if let Some(server) = server {
         server.start(&handle).await?;
         Ok(())
@@ -109,7 +113,7 @@ pub fn load_servers(state: State<'_, ServerManager>) -> Result<(), String> {
 #[tauri::command]
 pub fn get_servers(state: State<'_, ServerManager>) -> Result<Vec<Server>, String> {
     let is_empty = state.servers.read().unwrap().is_empty();
-    
+
     if is_empty {
         println!("Loading servers from disk...");
         state.load_from_disk()?;
@@ -124,7 +128,7 @@ pub async fn delete_server(id: String, state: State<'_, ServerManager>) -> Resul
         let servers = state.servers.read().unwrap();
         servers.get(&id).cloned()
     };
-    
+
     if let Some(server) = server_opt {
         server.delete().await?;
         state.remove_server(&id);
@@ -142,7 +146,7 @@ pub async fn create_server(
     java_version: String,
     ram: String,
     state: State<'_, ServerManager>,
-    handle: AppHandle, 
+    handle: AppHandle,
 ) -> Result<Server, String> {
     let new_server = Server::create(&handle, name, version, software, java_version, ram).await?;
     JavaManager::install_java(&handle, &new_server).await?;
@@ -153,17 +157,23 @@ pub async fn create_server(
 #[tauri::command]
 pub fn get_server(id: String, state: State<'_, ServerManager>) -> Result<Server, String> {
     let servers = state.servers.read().unwrap();
-    servers.get(&id).cloned().ok_or("Server no encontrado".to_string())
+    servers
+        .get(&id)
+        .cloned()
+        .ok_or("Server no encontrado".to_string())
 }
 
-
 #[tauri::command]
-pub async fn send_command(id: String, command: String, state: State<'_, ServerManager>) -> Result<(), String> {
+pub async fn send_command(
+    id: String,
+    command: String,
+    state: State<'_, ServerManager>,
+) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
         servers.get(&id).cloned()
     };
-    
+
     if let Some(server) = server {
         server.send_command(command).await?;
         Ok(())
@@ -173,12 +183,15 @@ pub async fn send_command(id: String, command: String, state: State<'_, ServerMa
 }
 
 #[tauri::command]
-pub async fn is_server_running(id: String, state: State<'_, ServerManager>) -> Result<bool, String> {
+pub async fn is_server_running(
+    id: String,
+    state: State<'_, ServerManager>,
+) -> Result<bool, String> {
     let server = {
         let servers = state.servers.read().unwrap();
         servers.get(&id).cloned()
     };
-    
+
     if let Some(server) = server {
         let guard = server.running.lock().await;
         Ok(guard.is_some())

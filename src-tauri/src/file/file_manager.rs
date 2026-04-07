@@ -20,7 +20,10 @@ pub fn read_dir(
 ) -> Result<Vec<FileInfo>, String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let base = server.get_path()?;
     let path = match sub_path {
@@ -68,7 +71,10 @@ pub fn read_file(
 ) -> Result<String, String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     let content = fs::read_to_string(&full_path).map_err(|e| e.to_string())?;
@@ -84,7 +90,10 @@ pub fn write_file(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     fs::write(&full_path, content).map_err(|e| e.to_string())?;
@@ -99,7 +108,10 @@ pub fn delete_file(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     fs::remove_file(&full_path).map_err(|e| e.to_string())?;
@@ -114,7 +126,10 @@ pub fn create_dir(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     fs::create_dir_all(&full_path).map_err(|e| e.to_string())?;
@@ -129,7 +144,10 @@ pub fn delete_dir(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     fs::remove_dir_all(&full_path).map_err(|e| e.to_string())?;
@@ -145,7 +163,10 @@ pub fn rename_file(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let base = server.get_path()?;
     let old = base.join(&path);
@@ -163,7 +184,10 @@ pub fn save_file_binary(
 ) -> Result<(), String> {
     let server = {
         let servers = state.servers.read().unwrap();
-        servers.get(&server_id).cloned().ok_or("Server no encontrado")?
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or("Server no encontrado")?
     };
     let full_path = server.get_path()?.join(&path);
     fs::write(&full_path, data).map_err(|e| e.to_string())?;

@@ -170,7 +170,7 @@ impl Server {
                     },
                 );
             }
-            
+
             // Server stdout closed, which means it stopped.
             {
                 let mut guard = running_clone.lock().await;
@@ -217,7 +217,7 @@ impl Server {
                 .write_all(cmd_with_newline.as_bytes())
                 .await
                 .map_err(|e| format!("Failed to write to stdin: {}", e))?;
-                
+
             running_server
                 .stdin
                 .flush()

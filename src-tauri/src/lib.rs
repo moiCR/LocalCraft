@@ -56,7 +56,7 @@ fn open_java_folder() -> Result<(), String> {
         .arg(&java_dir)
         .spawn()
         .map_err(|e| e.to_string())?;
-    
+
     #[cfg(target_os = "macos")]
     std::process::Command::new("open")
         .arg(&java_dir)
@@ -85,9 +85,16 @@ pub fn run() {
     ensure_app_dirs().unwrap();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {}))
         .manage(server_manager)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_prevent_default::init())
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
             let handle = app.handle();
 

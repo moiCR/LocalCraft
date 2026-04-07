@@ -10,20 +10,21 @@ use crate::server::{server::Server, server_manager::ProgressPayload};
 pub struct JavaManager {}
 
 impl JavaManager {
-    
     pub async fn install_java(handle: &AppHandle, server: &Server) -> Result<String, String> {
         let current_server = server.clone();
 
-        let java_version = current_server.java_version.ok_or("Java version not found in server config")?;
-        let server_id = current_server.id.to_string(); 
+        let java_version = current_server
+            .java_version
+            .ok_or("Java version not found in server config")?;
+        let server_id = current_server.id.to_string();
 
         let project_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
             .ok_or("Failed to resolve project directories")?;
-        
+
         let data_dir = project_dirs.data_dir();
         let global_java_dir = data_dir.join("java");
         let java_version_dir = global_java_dir.join(java_version.to_string());
-        
+
         let server_dir = data_dir.join("servers").join(&server_id);
         let server_java_path_file = server_dir.join("java_path.txt");
 
@@ -43,7 +44,11 @@ impl JavaManager {
             _ => "x64",
         };
 
-        let java_exe_name = if os_name == "windows" { "java.exe" } else { "java" };
+        let java_exe_name = if os_name == "windows" {
+            "java.exe"
+        } else {
+            "java"
+        };
 
         if server_java_path_file.exists() {
             let saved_path = fs::read_to_string(&server_java_path_file).unwrap_or_default();
@@ -58,7 +63,6 @@ impl JavaManager {
                 return Ok(saved_path);
             }
         }
-
 
         if java_version_dir.exists() {
             let mut java_exe_path = None;
@@ -105,15 +109,15 @@ impl JavaManager {
         {
             bytes.extend_from_slice(&chunk);
             downloaded += chunk.len() as f64;
-            
+
             if total_size > 0.0 {
                 let percentage = (downloaded / total_size) * 100.0;
                 let _ = handle.emit(
-                    "creation-progress", 
+                    "creation-progress",
                     ProgressPayload {
                         process: format!("Downloading Java {}...", java_version),
                         percentage: Some(percentage),
-                    }
+                    },
                 );
             }
         }
@@ -123,8 +127,8 @@ impl JavaManager {
 
         if os_name == "windows" {
             let cursor = std::io::Cursor::new(bytes);
-            let mut archive =
-                zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to read zip archive: {}", e))?;
+            let mut archive = zip::ZipArchive::new(cursor)
+                .map_err(|e| format!("Failed to read zip archive: {}", e))?;
             let total_files = archive.len() as f64;
 
             for i in 0..archive.len() {
@@ -177,13 +181,15 @@ impl JavaManager {
                 "creation-progress",
                 ProgressPayload {
                     process: "Extracting Java environment...".to_string(),
-                    percentage: None, 
+                    percentage: None,
                 },
             );
 
             for file_result in archive.entries().map_err(|e| format!("Tar error: {}", e))? {
                 let mut file = file_result.map_err(|e| format!("Archive entry error: {}", e))?;
-                let path = file.path().map_err(|e| format!("Path extraction error: {}", e))?;
+                let path = file
+                    .path()
+                    .map_err(|e| format!("Path extraction error: {}", e))?;
                 let outpath = java_version_dir.join(path);
 
                 if file.header().entry_type().is_dir() {
@@ -202,7 +208,7 @@ impl JavaManager {
                         {
                             if let Ok(metadata) = fs::metadata(&outpath) {
                                 let mut perms = metadata.permissions();
-                                perms.set_mode(0o755); 
+                                perms.set_mode(0o755);
                                 let _ = fs::set_permissions(&outpath, perms);
                             }
                         }

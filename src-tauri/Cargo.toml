@@ -26,3 +26,6 @@ tar = "0.4.45"
 flate2 = "1.1.9"
 walkdir = "2.5.0"
 tokio = { version = "1", features = ["full"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
