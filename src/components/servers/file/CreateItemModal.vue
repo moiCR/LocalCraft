@@ -46,7 +46,7 @@ const handleConfirm = () => {
         </button>
         
         <h2 class="text-xl font-bold tracking-tight text-black dark:text-white">
-          {{ type === 'file' ? 'Nuevo Archivo' : 'Nueva Carpeta' }}
+          {{ type === 'file' ? 'New File' : 'New Folder' }}
         </h2>
       </header>
 
@@ -54,7 +54,7 @@ const handleConfirm = () => {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-2">
           <label class="text-xs font-semibold text-black/40 dark:text-white/40 uppercase tracking-widest ml-1">
-            Nombre {{ type === 'file' ? 'del archivo' : 'de la carpeta' }}
+            {{ type === 'file' ? 'File Name' : 'Folder Name' }}
           </label>
           <div class="relative group">
             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40 group-focus-within:text-brand transition-colors">
@@ -75,7 +75,7 @@ const handleConfirm = () => {
           class="w-full py-3.5 bg-brand text-black text-sm font-bold rounded-xl hover:bg-brand/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand/20"
           @click="handleConfirm"
         >
-          {{ type === 'file' ? 'Crear Archivo' : 'Crear Carpeta' }}
+          {{ type === 'file' ? 'Create File' : 'Create Folder' }}
         </Button>
       </div>
     </div>

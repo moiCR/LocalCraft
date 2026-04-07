@@ -81,7 +81,7 @@ const triggerFileInput = () => {
         </button>
         
         <h2 class="text-xl font-bold tracking-tight text-black dark:text-white">
-          Subir Archivos
+          Upload Files
         </h2>
       </header>
 
@@ -123,10 +123,10 @@ const triggerFileInput = () => {
 
             <div class="text-center">
               <p class="text-base font-semibold text-black dark:text-white">
-                Arrastra y suelta archivos aquí
+                Drag and drop files here
               </p>
               <p class="text-xs text-black/40 dark:text-white/40 mt-1">
-                o haz clic para seleccionar manualmente
+                or click to select manually
               </p>
             </div>
           </div>
@@ -151,7 +151,7 @@ const triggerFileInput = () => {
         <div class="flex items-center gap-3 p-4 bg-black/5 dark:bg-white/5 rounded-2xl">
           <AlertCircle :size="18" class="text-brand shrink-0" />
           <p class="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-            Puedes subir múltiples archivos a la vez. El progreso se actualizará en tiempo real.
+            You can upload multiple files at once. The progress will be updated in real time.
           </p>
         </div>
       </div>
