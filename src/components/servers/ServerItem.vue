@@ -128,6 +128,7 @@ const onClick = (e: Event) => {
             @pointercancel="onPointerUp"
             @click.capture="onClick"
             class="relative z-10 bg-white/2 dark:bg-white/3 hover:bg-white/5 border border-white/5 transition-all duration-300 rounded-2xl p-4 flex flex-row items-center gap-4 cursor-pointer touch-none"
+            :layout-id="'delete-server-' + server.id"
         >
             <!-- Icon Section -->
             <div :class="[

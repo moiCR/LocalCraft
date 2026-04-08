@@ -8,6 +8,8 @@ interface Props {
   filePath: string | null;
   fileName: string | null;
   serverId: string;
+  anchorEl?: HTMLElement | null;
+  layoutId?: string;
 }
 
 const props = defineProps<Props>();
@@ -149,6 +151,8 @@ function syncScroll(e: Event) {
 <template>
   <Modal
     :is-open="isOpen"
+    :anchor-el="anchorEl"
+    :layout-id="layoutId"
     @close="close"
   >
     <div

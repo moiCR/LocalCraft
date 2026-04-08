@@ -48,7 +48,7 @@ onMounted(() => {
                 <p class="text-white/40 text-sm ml-11 font-medium">Manage and monitor your Minecraft instances from one central hub.</p>
             </section>
             <section class="flex flex-row items-center gap-2">
-                <Button ref="createBtnEl" :tooltip="'Create a new server'" :tooltip-position="'bottom'" @click="showCreateModal = true" >
+                <Button ref="createBtnEl" :tooltip="'Create a new server'" :tooltip-position="'bottom'" @click="showCreateModal = true" layout-id="server-create-modal">
                     <PlusIcon :size="24"/>
                 </Button>
                 <Button :tooltip="'Refresh servers'" :tooltip-position="'bottom'" @click="loadServers" :disabled="isLoading">

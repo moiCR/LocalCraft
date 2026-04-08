@@ -26,7 +26,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
-  open: [file: FileInfo];
+  open: [payload: { file: FileInfo; anchor: HTMLElement }];
   rename: [payload: { file: FileInfo; anchor: HTMLElement }];
   delete: [payload: { file: FileInfo; anchor: HTMLElement }];
 }>();
@@ -121,7 +121,8 @@ function formatSize(bytes: number): string {
   <div
     class="file-item group flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-150"
     :class="file.is_dir ? 'hover:bg-blue-500/10' : 'hover:bg-white/5'"
-    @click="emit('open', file)"
+    @click="(e: MouseEvent) => emit('open', { file, anchor: e.currentTarget as HTMLElement })"
+    layout-id="file-editor-modal"
   >
     <!-- Icon -->
     <component
@@ -154,6 +155,7 @@ function formatSize(bytes: number): string {
         class="p-1.5 rounded-md text-white/40 hover:text-white/90 hover:bg-white/10 transition-all duration-150"
         title="Rename"
         @click="emit('rename', { file, anchor: renameBtn! })"
+        layout-id="file-rename-modal"
       >
         <Pencil :size="13" />
       </button>
@@ -162,6 +164,7 @@ function formatSize(bytes: number): string {
         class="p-1.5 rounded-md text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
         title="Delete"
         @click="emit('delete', { file, anchor: deleteBtn! })"
+        layout-id="file-delete-modal"
       >
         <Trash2 :size="13" />
       </button>

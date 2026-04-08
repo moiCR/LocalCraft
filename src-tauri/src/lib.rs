@@ -17,6 +17,10 @@ use server::server_manager::{
     create_server, delete_server, get_server, get_servers, is_server_running, load_servers,
     open_folder, send_command, start_server, ServerManager,
 };
+use server::tunnel_manager::{
+    get_tunnel_status, start_tunnel, stop_tunnel, TunnelManager,
+};
+use software::software_manager::download_playit_command;
 
 #[tauri::command]
 fn get_installed_java() -> Result<Vec<String>, String> {
@@ -82,11 +86,13 @@ pub fn run() {
     }
 
     let server_manager = ServerManager::new();
+    let tunnel_manager = TunnelManager::new();
     ensure_app_dirs().unwrap();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .manage(server_manager)
+        .manage(tunnel_manager)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_prevent_default::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -186,7 +192,11 @@ pub fn run() {
             delete_dir,
             rename_file,
             save_file_binary,
-            open_java_folder
+            open_java_folder,
+            download_playit_command,
+            start_tunnel,
+            stop_tunnel,
+            get_tunnel_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
