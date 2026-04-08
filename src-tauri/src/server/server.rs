@@ -68,8 +68,11 @@ impl Server {
         fs::write(server_dir.join("eula.txt"), "eula=true\n")
             .map_err(|e| format!("Error creating eula.txt: {}", e))?;
 
-        if server.software == "paper" {
-            SoftwareManager::get_paper_jar(handle, &server).await?;
+        match server.software.as_str() {
+            "paper" => SoftwareManager::get_paper_jar(handle, &server).await?,
+            "vanilla" => SoftwareManager::get_vanilla_jar(handle, &server).await?,
+            "fabric" => SoftwareManager::get_fabric_jar(handle, &server).await?,
+            _ => {} // "forge" handled later in server_manager after Java install
         }
 
         let _ = handle.emit(
@@ -112,24 +115,68 @@ impl Server {
 
         let dir = self.get_path()?;
 
-        let server_jar = dir.join("server.jar");
-        if !server_jar.exists() {
-            return Err(
-                "server.jar not found. Please ensure the server was created correctly.".to_string(),
-            );
-        }
-
         let ram_arg = format!("-Xmx{}M", self.ram);
-        let java_path = dir.join("java_path.txt");
-        let java_path_str = fs::read_to_string(&java_path)
+
+        // Case 1: Modern Forge (1.17+) — installer creates run.bat / run.sh
+        let forge_script = if cfg!(target_os = "windows") {
+            dir.join("run.bat")
+        } else {
+            dir.join("run.sh")
+        };
+
+        // Case 2: Old Forge (pre-1.17) — installer creates forge-{mc}-{forge}.jar in server dir
+        let old_forge_jar = fs::read_dir(&dir).ok().and_then(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .find(|e| {
+                    let n = e.file_name().to_string_lossy().to_string();
+                    n.starts_with("forge-") && n.ends_with(".jar") && !n.contains("installer")
+                })
+                .map(|e| e.path())
+        });
+
+        let java_path_file = dir.join("java_path.txt");
+        let java_path_str = fs::read_to_string(&java_path_file)
             .map_err(|e| format!("Failed to read java path: {}", e))?;
 
-        let mut command = Command::new(java_path_str);
+        let mut command = if forge_script.exists() {
+            // Modern Forge: write RAM into user_jvm_args.txt so Forge picks it up,
+            // then run the generated launch script.
+            let jvm_args_path = dir.join("user_jvm_args.txt");
+            let mut jvm_content = fs::read_to_string(&jvm_args_path).unwrap_or_default();
+            if !jvm_content.contains("-Xmx") {
+                jvm_content.push_str(&format!("\n{}\n", ram_arg));
+                fs::write(&jvm_args_path, &jvm_content)
+                    .map_err(|e| format!("Failed to write user_jvm_args.txt: {}", e))?;
+            }
+            if cfg!(target_os = "windows") {
+                let mut cmd = Command::new("cmd");
+                cmd.arg("/c").arg("run.bat").arg("nogui");
+                cmd
+            } else {
+                let mut cmd = Command::new("bash");
+                cmd.arg("run.sh").arg("nogui");
+                cmd
+            }
+        } else if let Some(ref forge_jar) = old_forge_jar {
+            // Old Forge: run the forge universal jar directly
+            let mut cmd = Command::new(java_path_str.trim());
+            cmd.arg(&ram_arg).arg("-jar").arg(forge_jar).arg("nogui");
+            cmd
+        } else {
+            // Standard: Paper / Vanilla / Fabric use server.jar
+            let server_jar = dir.join("server.jar");
+            if !server_jar.exists() {
+                return Err(
+                    "server.jar not found. Please ensure the server was created correctly."
+                        .to_string(),
+                );
+            }
+            let mut cmd = Command::new(java_path_str.trim());
+            cmd.arg(&ram_arg).arg("-jar").arg("server.jar").arg("nogui");
+            cmd
+        };
         command
-            .arg(&ram_arg)
-            .arg("-jar")
-            .arg("server.jar")
-            .arg("nogui")
             .current_dir(&dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

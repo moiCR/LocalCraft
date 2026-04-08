@@ -30,15 +30,15 @@ export default {
         @mouseleave="hovered = false"
     >
         <button
-            v-if="showButton"
-            :disabled="disabled"
+            v-if="props.showButton"
+            :disabled="props.disabled"
             v-bind="$attrs"
             :class="[
                 'relative z-10 cursor-pointer font-bold px-4 py-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
                 !($attrs.class as string)?.includes('bg-')
                     ? 'text-white dark:text-black bg-black dark:bg-white'
                     : '',
-                disabled
+                props.disabled
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:scale-x-105 hover:scale-y-[0.95]',
                 $attrs.class,
@@ -57,24 +57,24 @@ export default {
             leave-to-class="opacity-0 translate-y-1 scale-95"
         >
             <div
-                v-if="tooltip && hovered"
+                v-if="props.tooltip && hovered"
                 :class="[
                     'absolute pointer-events-none z-100 whitespace-nowrap rounded-lg bg-neutral-900 dark:bg-neutral-100 px-3 py-1.5 text-xs font-medium text-white dark:text-black shadow-lg',
-                    tooltipPosition === 'top'
+                    props.tooltipPosition === 'top'
                         ? 'bottom-full left-1/2 -translate-x-1/2 mb-2'
                         : '',
-                    tooltipPosition === 'bottom'
+                    props.tooltipPosition === 'bottom'
                         ? 'top-full left-1/2 -translate-x-1/2 mt-2'
                         : '',
-                    tooltipPosition === 'left'
+                    props.tooltipPosition === 'left'
                         ? 'right-full top-1/2 -translate-y-1/2 mr-2'
                         : '',
-                    tooltipPosition === 'right'
+                    props.tooltipPosition === 'right'
                         ? 'left-full top-1/2 -translate-y-1/2 ml-2'
                         : '',
                 ]"
             >
-                {{ tooltip }}
+                {{ props.tooltip }}
             </div>
         </Transition>
     </div>

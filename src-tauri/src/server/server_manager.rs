@@ -3,7 +3,10 @@ use serde::Serialize;
 use std::{collections::HashMap, sync::RwLock};
 use tauri::{AppHandle, State};
 
-use crate::{java::java_manager::JavaManager, server::server::Server};
+use crate::{
+    java::java_manager::JavaManager, server::server::Server,
+    software::software_manager::SoftwareManager,
+};
 
 #[derive(Clone, Serialize)]
 pub struct ProgressPayload {
@@ -150,6 +153,23 @@ pub async fn create_server(
 ) -> Result<Server, String> {
     let new_server = Server::create(&handle, name, version, software, java_version, ram).await?;
     JavaManager::install_java(&handle, &new_server).await?;
+
+    if new_server.software == "forge" {
+        SoftwareManager::get_forge_jar(&handle, &new_server).await?;
+    }
+    
+    if new_server.software == "fabric" {
+        SoftwareManager::get_fabric_jar(&handle, &new_server).await?;
+    }
+    
+    if new_server.software == "paper" {
+        SoftwareManager::get_paper_jar(&handle, &new_server).await?;
+    }
+    
+    if new_server.software == "vanilla" {
+        SoftwareManager::get_vanilla_jar(&handle, &new_server).await?;
+    }
+    
     state.add_server(new_server.clone());
     Ok(new_server)
 }
