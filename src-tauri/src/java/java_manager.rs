@@ -232,4 +232,183 @@ impl JavaManager {
 
         Ok(final_path)
     }
+
+    pub async fn install_java_standalone(handle: &AppHandle, version: u32) -> Result<(), String> {
+        let project_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
+            .ok_or("Failed to resolve project directories")?;
+
+        let data_dir = project_dirs.data_dir();
+        let java_version_dir = data_dir.join("java").join(version.to_string());
+
+        if java_version_dir.exists() {
+            return Err(format!("Java {} is already installed", version));
+        }
+
+        let os_name = env::consts::OS;
+        let arch = env::consts::ARCH;
+
+        let adoptium_os = match os_name {
+            "windows" => "windows",
+            "macos" => "mac",
+            "linux" => "linux",
+            _ => "linux",
+        };
+
+        let adoptium_arch = match arch {
+            "x86_64" => "x64",
+            "aarch64" => "aarch64",
+            _ => "x64",
+        };
+
+        let java_url = format!(
+            "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse",
+            version, adoptium_os, adoptium_arch
+        );
+
+        let _ = handle.emit(
+            "creation-progress",
+            ProgressPayload {
+                process: format!("Downloading Java {}...", version),
+                percentage: Some(0.0),
+            },
+        );
+
+        let mut response = reqwest::get(&java_url)
+            .await
+            .map_err(|e| format!("Failed to download Java {}: {}", version, e))?;
+
+        let total_size = response.content_length().unwrap_or(0) as f64;
+        let mut bytes: Vec<u8> = Vec::new();
+        let mut downloaded = 0.0_f64;
+
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|e| format!("Failed to read chunk: {}", e))?
+        {
+            bytes.extend_from_slice(&chunk);
+            downloaded += chunk.len() as f64;
+            if total_size > 0.0 {
+                let _ = handle.emit(
+                    "creation-progress",
+                    ProgressPayload {
+                        process: format!("Downloading Java {}...", version),
+                        percentage: Some((downloaded / total_size) * 100.0),
+                    },
+                );
+            }
+        }
+
+        fs::create_dir_all(&java_version_dir)
+            .map_err(|e| format!("Failed to create java dir: {}", e))?;
+
+        if os_name == "windows" {
+            let cursor = std::io::Cursor::new(bytes);
+            let mut archive =
+                zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to read zip: {}", e))?;
+            let total_files = archive.len() as f64;
+
+            for i in 0..archive.len() {
+                if i % 50 == 0 || i == archive.len() - 1 {
+                    let pct = ((i + 1) as f64 / total_files) * 100.0;
+                    let _ = handle.emit(
+                        "creation-progress",
+                        ProgressPayload {
+                            process: "Extracting Java environment...".to_string(),
+                            percentage: Some(pct),
+                        },
+                    );
+                }
+
+                let mut file = archive
+                    .by_index(i)
+                    .map_err(|e| format!("Zip extraction error: {}", e))?;
+
+                let outpath = match file.enclosed_name() {
+                    Some(path) => java_version_dir.join(path),
+                    None => continue,
+                };
+
+                if (*file.name()).ends_with('/') {
+                    fs::create_dir_all(&outpath).unwrap_or_default();
+                } else {
+                    if let Some(p) = outpath.parent() {
+                        fs::create_dir_all(p).unwrap_or_default();
+                    }
+                    if let Ok(mut outfile) = std::fs::File::create(&outpath) {
+                        std::io::copy(&mut file, &mut outfile).unwrap_or_default();
+                    }
+                }
+            }
+        } else {
+            use flate2::read::GzDecoder;
+            use tar::Archive;
+
+            let cursor = std::io::Cursor::new(bytes);
+            let tar = GzDecoder::new(cursor);
+            let mut archive = Archive::new(tar);
+
+            let _ = handle.emit(
+                "creation-progress",
+                ProgressPayload {
+                    process: "Extracting Java environment...".to_string(),
+                    percentage: None,
+                },
+            );
+
+            for file_result in archive.entries().map_err(|e| format!("Tar error: {}", e))? {
+                let mut file = file_result.map_err(|e| format!("Archive entry error: {}", e))?;
+                let path = file.path().map_err(|e| format!("Path error: {}", e))?;
+                let outpath = java_version_dir.join(path);
+
+                if file.header().entry_type().is_dir() {
+                    fs::create_dir_all(&outpath).unwrap_or_default();
+                } else {
+                    if let Some(p) = outpath.parent() {
+                        fs::create_dir_all(p).unwrap_or_default();
+                    }
+                    file.unpack(&outpath)
+                        .map_err(|e| format!("Unpack error: {}", e))?;
+
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(meta) = fs::metadata(&outpath) {
+                            let mut perms = meta.permissions();
+                            perms.set_mode(0o755);
+                            let _ = fs::set_permissions(&outpath, perms);
+                        }
+                    }
+                }
+            }
+        }
+
+        let _ = handle.emit(
+            "creation-progress",
+            ProgressPayload {
+                process: format!("Java {} installed successfully!", version),
+                percentage: Some(100.0),
+            },
+        );
+
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub async fn install_java_cmd(handle: AppHandle, version: u32) -> Result<(), String> {
+    JavaManager::install_java_standalone(&handle, version).await
+}
+
+#[tauri::command]
+pub fn delete_java(version: String) -> Result<(), String> {
+    let project_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
+        .ok_or("Failed to resolve project directories")?;
+    let java_dir = project_dirs.data_dir().join("java").join(&version);
+    if !java_dir.exists() {
+        return Err(format!("Java {} is not installed", version));
+    }
+    fs::remove_dir_all(&java_dir)
+        .map_err(|e| format!("Failed to delete Java {}: {}", version, e))?;
+    Ok(())
 }

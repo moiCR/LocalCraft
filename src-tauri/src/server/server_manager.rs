@@ -242,3 +242,22 @@ pub fn open_folder(
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn update_server(
+    id: String,
+    name: String,
+    ram: String,
+    java_version: String,
+    state: State<'_, ServerManager>,
+) -> Result<Server, String> {
+    let mut servers = state.servers.write().unwrap();
+    let server = servers
+        .get_mut(&id)
+        .ok_or_else(|| "Server not found".to_string())?;
+    server.name = name;
+    server.ram = ram;
+    server.java_version = Some(java_version);
+    server.save_json()?;
+    Ok(server.clone())
+}

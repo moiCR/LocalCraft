@@ -13,13 +13,12 @@ use file::file_manager::{
     create_dir, delete_dir, delete_file, read_dir, read_file, rename_file, save_file_binary,
     write_file,
 };
+use java::java_manager::{delete_java, install_java_cmd};
 use server::server_manager::{
     create_server, delete_server, get_server, get_servers, is_server_running, load_servers,
-    open_folder, send_command, start_server, ServerManager,
+    open_folder, send_command, start_server, update_server, ServerManager,
 };
-use server::tunnel_manager::{
-    get_tunnel_status, start_tunnel, stop_tunnel, TunnelManager,
-};
+use server::tunnel_manager::{get_tunnel_status, start_tunnel, stop_tunnel, TunnelManager};
 use software::software_manager::download_playit_command;
 
 #[tauri::command]
@@ -184,6 +183,7 @@ pub fn run() {
             send_command,
             is_server_running,
             open_folder,
+            update_server,
             read_dir,
             read_file,
             write_file,
@@ -193,6 +193,8 @@ pub fn run() {
             rename_file,
             save_file_binary,
             open_java_folder,
+            install_java_cmd,
+            delete_java,
             download_playit_command,
             start_tunnel,
             stop_tunnel,

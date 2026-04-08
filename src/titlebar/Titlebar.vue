@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Minus, Square, X } from '@lucide/vue';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useRoute } from 'vue-router';
+import { computed } from "vue";
+import { Minus, Square, X } from "@lucide/vue";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useRoute } from "vue-router";
 
 const appWindow = getCurrentWindow();
 
@@ -11,68 +11,94 @@ const toggleMaximize = () => appWindow.toggleMaximize();
 const close = () => appWindow.close();
 const route = useRoute();
 
-const isServerRoute = computed(() => route.name?.toString().startsWith('server-'));
+const isServerRoute = computed(() =>
+    route.name?.toString().startsWith("server-"),
+);
 
 const baseTitle = computed(() => {
-    if (isServerRoute.value) return 'Manage Server';
+    if (isServerRoute.value) return "Manage Server";
     switch (route.name) {
-        case 'home': return 'Home';
-        case 'servers': return 'Servers';
-        case 'java': return 'Java';
-        case 'about': return 'About';
-        default: return '';
+        case "home":
+            return "Home";
+        case "servers":
+            return "Servers";
+        case "java":
+            return "Java";
+        case "about":
+            return "About";
+        default:
+            return "";
     }
 });
 
 const subTitle = computed(() => {
     switch (route.name) {
-        case 'server-console': return 'Console';
-        case 'server-files': return 'Files';
-        case 'server-mods': return 'Mods';
-        default: return '';
+        case "server-console":
+            return "Console";
+        case "server-files":
+            return "Files";
+        case "server-mods":
+            return "Mods";
+        default:
+            return "";
     }
 });
 </script>
 
 <template>
-    <div 
-        data-tauri-drag-region 
+    <div
+        data-tauri-drag-region
         class="h-10 w-full select-none flex justify-between rounded-t-lg items-center bg-[#141414] border-b border-[#242424] shrink-0 z-50"
     >
-        <div data-tauri-drag-region class="pl-4 gap-2 text-xs text-gray-500 font-bold tracking-widest flex items-center h-full w-full">
+        <div
+            data-tauri-drag-region
+            class="pl-4 gap-2 text-xs text-gray-500 font-bold tracking-widest flex items-center h-full w-full"
+        >
             <section class="flex items-center">
                 <span>LocalCraft</span>
                 <span v-if="baseTitle" class="ml-1 opacity-60"> | </span>
                 <Transition name="title-fade" mode="out-in">
-                    <span :key="baseTitle" v-if="baseTitle" class="ml-2 opacity-60"> {{ baseTitle }}</span>
+                    <span
+                        :key="baseTitle"
+                        v-if="baseTitle"
+                        class="ml-2 opacity-60"
+                    >
+                        {{ baseTitle }}</span
+                    >
                 </Transition>
                 <span v-if="subTitle" class="ml-1 opacity-60"> | </span>
                 <Transition name="title-fade" mode="out-in">
-                    <span :key="subTitle" v-if="subTitle" class="ml-1 opacity-60"> {{ subTitle }}</span>
+                    <span
+                        :key="subTitle"
+                        v-if="subTitle"
+                        class="ml-1 opacity-60"
+                    >
+                        {{ subTitle }}</span
+                    >
                 </Transition>
             </section>
         </div>
 
         <div class="flex h-full">
-            <button 
-                @click="minimize" 
-                class="px-4 h-full hover:bg-white/10 transition-colors rounded-3xl text-gray-400 hover:text-white" 
+            <button
+                @click="minimize"
+                class="px-4 h-full hover:bg-white/10 transition-colors rounded-full text-gray-400 hover:text-white"
                 title="Minimize"
             >
                 <Minus :size="16" />
             </button>
-            
-            <button 
-                @click="toggleMaximize" 
-                class="px-4 h-full hover:bg-white/10 transition-colors rounded-3xl text-gray-400 hover:text-white" 
+
+            <button
+                @click="toggleMaximize"
+                class="px-4 h-full hover:bg-white/10 transition-colors rounded-full text-gray-400 hover:text-white"
                 title="Maximize"
             >
                 <Square :size="14" />
             </button>
-            
-            <button 
-                @click="close" 
-                class="px-4 h-full hover:bg-red-500 transition-colors rounded-3xl text-gray-400 hover:text-white" 
+
+            <button
+                @click="close"
+                class="px-4 h-full hover:bg-red-500 transition-colors rounded-full text-gray-400 hover:text-white"
                 title="Close"
             >
                 <X :size="16" />
