@@ -1,7 +1,7 @@
 use directories::ProjectDirs;
 use serde::Serialize;
 use std::{collections::HashMap, sync::RwLock};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::{
     java::java_manager::JavaManager, server::server::Server,
@@ -151,25 +151,29 @@ pub async fn create_server(
     state: State<'_, ServerManager>,
     handle: AppHandle,
 ) -> Result<Server, String> {
+    // 1. Create directory, save config, write eula.txt
     let new_server = Server::create(&handle, name, version, software, java_version, ram).await?;
+
+    // 2. Install Java (must happen before Forge, which needs it to run the installer)
     JavaManager::install_java(&handle, &new_server).await?;
 
-    if new_server.software == "forge" {
-        SoftwareManager::get_forge_jar(&handle, &new_server).await?;
+    // 3. Download / install the server software
+    match new_server.software.as_str() {
+        "forge" => SoftwareManager::get_forge_jar(&handle, &new_server).await?,
+        "fabric" => SoftwareManager::get_fabric_jar(&handle, &new_server).await?,
+        "paper" => SoftwareManager::get_paper_jar(&handle, &new_server).await?,
+        "vanilla" => SoftwareManager::get_vanilla_jar(&handle, &new_server).await?,
+        other => return Err(format!("Unknown software type: {}", other)),
     }
-    
-    if new_server.software == "fabric" {
-        SoftwareManager::get_fabric_jar(&handle, &new_server).await?;
-    }
-    
-    if new_server.software == "paper" {
-        SoftwareManager::get_paper_jar(&handle, &new_server).await?;
-    }
-    
-    if new_server.software == "vanilla" {
-        SoftwareManager::get_vanilla_jar(&handle, &new_server).await?;
-    }
-    
+
+    let _ = handle.emit(
+        "creation-progress",
+        ProgressPayload {
+            process: "Server created successfully.".to_string(),
+            percentage: Some(100.0),
+        },
+    );
+
     state.add_server(new_server.clone());
     Ok(new_server)
 }

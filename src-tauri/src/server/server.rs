@@ -7,8 +7,6 @@ use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{server::server_manager::ProgressPayload, software::software_manager::SoftwareManager};
-
 pub struct RunningServer {
     pub stdin: ChildStdin,
     pub child: Child,
@@ -35,7 +33,7 @@ struct LogPayload {
 
 impl Server {
     pub async fn create(
-        handle: &AppHandle,
+        _handle: &AppHandle,
         name: String,
         version: String,
         software: String,
@@ -67,21 +65,6 @@ impl Server {
 
         fs::write(server_dir.join("eula.txt"), "eula=true\n")
             .map_err(|e| format!("Error creating eula.txt: {}", e))?;
-
-        match server.software.as_str() {
-            "paper" => SoftwareManager::get_paper_jar(handle, &server).await?,
-            "vanilla" => SoftwareManager::get_vanilla_jar(handle, &server).await?,
-            "fabric" => SoftwareManager::get_fabric_jar(handle, &server).await?,
-            _ => {} // "forge" handled later in server_manager after Java install
-        }
-
-        let _ = handle.emit(
-            "creation-progress",
-            ProgressPayload {
-                process: "Server created successfully.".to_string(),
-                percentage: Some(100.0),
-            },
-        );
 
         Ok(server)
     }

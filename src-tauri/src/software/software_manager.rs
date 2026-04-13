@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
-
 use directories::ProjectDirs;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter};
@@ -117,7 +116,6 @@ impl SoftwareManager {
             },
         );
 
-        // Step 1: version manifest
         let manifest: Value =
             reqwest::get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
                 .await
@@ -137,7 +135,6 @@ impl SoftwareManager {
             .ok_or_else(|| format!("Version {} not found in manifest", server.version))?
             .to_string();
 
-        // Step 2: version-specific manifest → server jar URL
         let version_manifest: Value = reqwest::get(&version_url)
             .await
             .map_err(|e| format!("Failed to fetch version manifest: {}", e))?
@@ -163,7 +160,6 @@ impl SoftwareManager {
             },
         );
 
-        // Latest loader version for this MC version
         let loader_url = format!(
             "https://meta.fabricmc.net/v2/versions/loader/{}",
             server.version
@@ -180,7 +176,6 @@ impl SoftwareManager {
             .ok_or("Failed to get Fabric loader version")?
             .to_string();
 
-        // Latest installer version
         let installers: Value = reqwest::get("https://meta.fabricmc.net/v2/versions/installer")
             .await
             .map_err(|e| format!("Failed to fetch Fabric installers: {}", e))?
@@ -193,7 +188,6 @@ impl SoftwareManager {
             .ok_or("Failed to get Fabric installer version")?
             .to_string();
 
-        // Fabric meta serves the full server JAR directly at this URL
         let download_url = format!(
             "https://meta.fabricmc.net/v2/versions/loader/{}/{}/{}/server/jar",
             server.version, loader_version, installer_version
@@ -212,7 +206,6 @@ impl SoftwareManager {
             },
         );
 
-        // Forge promotions — recommended then latest
         let promos: Value = reqwest::get(
             "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json",
         )

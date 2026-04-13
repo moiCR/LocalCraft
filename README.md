@@ -55,8 +55,8 @@ Below are the key components of the application:
 
 | Component | Screenshot |
 | :--- | :--- |
-| **Dashboard** | ![Dashboard](public/servers_dashboard.png) |
-| **Server Creation** | ![Creation Modal](public/servers_dashboard_with_modal.png) |
+| **Dashboard** | ![Dashboard](public/dashboard.png) |
+| **Server Creation** | ![Creation Modal](public/dashboard_with_modal.png) |
 | **Java Configuration** | (Coming Soon) |
 
 ---
