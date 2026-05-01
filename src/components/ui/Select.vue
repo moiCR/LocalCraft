@@ -93,7 +93,7 @@ onUnmounted(() => {
         :class="['relative flex flex-col gap-1.5 w-full', props.class]"
         ref="selectRef"
     >
-        <label v-if="label" class="text-xs font-medium text-gray-500 dark:text-gray-400">
+        <label v-if="label" class="text-xs font-medium text-gray-400">
             {{ label }}
         </label>
         <div
@@ -102,9 +102,9 @@ onUnmounted(() => {
             :class="[
                 'flex items-center justify-between px-3 py-2 rounded-lg border transition-all shadow-sm',
                 disabled 
-                    ? 'opacity-50 cursor-not-allowed bg-black/5 border-black/5 dark:bg-white/5 dark:border-white/5 text-gray-500'
-                    : 'cursor-pointer border-black/5 bg-black/2 hover:bg-black/5 dark:border-white/5 dark:bg-white/2 dark:hover:bg-white/5 text-black dark:text-white',
-                isOpen && !disabled ? 'ring-1 ring-black/20 dark:ring-white/20' : ''
+                    ? 'opacity-50 cursor-not-allowed bg-white/5 border-white/5 text-gray-500'
+                    : 'cursor-pointer border-white/5 bg-white/2 hover:bg-white/5 text-white',
+                isOpen && !disabled ? 'ring-1 ring-white/20' : ''
             ]"
         >
             <span :class="['truncate text-sm', !selectedOption && 'text-gray-500']">
@@ -128,7 +128,7 @@ onUnmounted(() => {
                         },
                         dropdownPos.openAbove ? { bottom: `${dropdownPos.bottom}px` } : { top: `${dropdownPos.top}px` }
                     ]"
-                    class="z-100 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10 rounded-xl shadow-xl overflow-hidden"
+                    class="z-100 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-xl overflow-hidden"
                 >
                     <div class="max-h-60 overflow-y-auto p-1.5 custom-scrollbar">
                         <div
@@ -143,10 +143,10 @@ onUnmounted(() => {
                             @click="selectOption(option.value)"
                             :class="[
                                 'flex items-center justify-between p-2.5 px-3 cursor-pointer rounded-lg text-sm transition-colors',
-                                'hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400',
+                                'hover:bg-blue-500/10 hover:text-blue-400',
                                 modelValue === option.value
-                                    ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium'
-                                    : 'text-gray-600 dark:text-gray-300'
+                                    ? 'bg-blue-500/20 text-blue-400 font-medium'
+                                    : 'text-gray-300'
                             ]"
                         >
                             {{ option.label }}

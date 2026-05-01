@@ -1,85 +1,51 @@
 <script setup lang="ts">
-import { HomeIcon, Server, Coffee, Info } from "@lucide/vue";
+import { Coffee, HomeIcon, Info, Server } from "@lucide/vue";
 
-import Sidebar from "../components/sidebar/Sidebar.vue";
-import SidebarItem from "../components/sidebar/SidebarItem.vue";
-import { ref } from "vue";
 import { useRoute } from "vue-router";
 import Titlebar from "../titlebar/Titlebar.vue";
-
-const isOpen = ref(true);
-
-const toggleSidebar = () => {
-    isOpen.value = !isOpen.value;
-};
+import Navbar from "../components/navbar/Navbar.vue";
+import NavbarItem from "../components/navbar/NavbarItem.vue";
 
 const route = useRoute();
 </script>
 
 <template>
-    <div class="flex flex-col h-screen w-full">
+    <div class="flex flex-col h-screen w-full bg-[#101010] text-white">
         <Titlebar />
-        <div class="flex flex-row h-screen w-full">
-            <Sidebar :isOpen="isOpen" :toggleSidebar="toggleSidebar">
-                <div class="flex flex-col gap-1">
-                    <span
-                        v-if="isOpen"
-                        class="px-4 mb-2 text-[10px] font-bold text-white/30 tracking-widest uppercase animate-in fade-in duration-500"
-                        >MAIN</span
-                    >
-                    <SidebarItem
-                        title="Home"
-                        :icon="HomeIcon"
-                        to="home"
-                        :active="route.path.includes('home')"
-                        :isOpen="isOpen"
-                    />
-                    <SidebarItem
-                        title="Servers"
-                        :icon="Server"
-                        to="servers"
-                        :active="route.path.includes('servers')"
-                        :isOpen="isOpen"
-                    />
-                </div>
+        <main
+            class="flex-1 min-h-0 overflow-y-auto items-center justify-center px-52 pt-12 pb-10 w-full overflow-x-hidden"
+        >
+            <RouterView />
+        </main>
 
-                <div class="flex flex-col gap-1 mt-6">
-                    <span
-                        v-if="isOpen"
-                        class="px-4 mb-2 text-[10px] font-bold text-white/30 tracking-widest uppercase animate-in fade-in duration-500"
-                        >MANAGEMENT</span
-                    >
-                    <SidebarItem
-                        title="Java Environments"
-                        :icon="Coffee"
-                        to="java"
-                        :active="route.path.includes('java')"
-                        :isOpen="isOpen"
-                    />
-                    <!--<SidebarItem title="Backups" :icon="Database" to="/backups" :active="route.path === '/backups'" :isOpen="isOpen" />-->
-                </div>
-
-                <div class="flex flex-col gap-1 mt-6">
-                    <span
-                        v-if="isOpen"
-                        class="px-4 mb-2 text-[10px] font-bold text-white/30 tracking-widest uppercase animate-in fade-in duration-500"
-                        >ABOUT</span
-                    >
-                    <SidebarItem
-                        title="About"
-                        :icon="Info"
-                        to="about"
-                        :active="route.path.includes('about')"
-                        :isOpen="isOpen"
-                    />
-                </div>
-            </Sidebar>
-
-            <main
-                class="flex-1 overflow-y-auto px-24 py-12 w-[calc(100%-256px)] text-black dark:text-white overflow-x-hidden"
-            >
-                <RouterView />
-            </main>
-        </div>
+        <Navbar>
+            <NavbarItem
+                title="Home"
+                :active="route.name === 'home'"
+                :icon="HomeIcon"
+                to="home"
+            />
+            <NavbarItem
+                title="Servers"
+                :active="
+                    route.name === 'servers' ||
+                    String(route.name).startsWith('server-')
+                "
+                :icon="Server"
+                to="servers"
+            />
+            <NavbarItem
+                title="Java"
+                :active="route.name === 'java'"
+                :icon="Coffee"
+                to="java"
+            />
+            <NavbarItem
+                title="About"
+                :active="route.name === 'about'"
+                :icon="Info"
+                to="about"
+            />
+        </Navbar>
     </div>
 </template>

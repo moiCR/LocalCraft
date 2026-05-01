@@ -131,7 +131,7 @@ const handleSave = async () => {
         <div class="flex flex-col p-6 gap-5 w-full min-w-[320px]">
             <!-- Header -->
             <h3
-                class="text-base font-bold text-black dark:text-white tracking-tight"
+                class="text-base font-bold text-white tracking-tight"
             >
                 Server Settings
             </h3>
@@ -143,7 +143,7 @@ const handleSave = async () => {
             >
                 <AlertTriangle :size="14" class="text-amber-500 shrink-0" />
                 <p
-                    class="text-[11px] text-amber-600 dark:text-amber-400 leading-snug"
+                    class="text-[11px] text-amber-400 leading-snug"
                 >
                     Changes to RAM and Java will take effect on the next
                     restart.
@@ -156,7 +156,7 @@ const handleSave = async () => {
                 <div class="flex flex-col gap-1.5">
                     <label
                         for="settings-name"
-                        class="text-xs font-medium text-gray-500 dark:text-gray-400"
+                        class="text-xs font-medium text-gray-400"
                     >
                         Name
                     </label>
@@ -165,7 +165,7 @@ const handleSave = async () => {
                         v-model="name"
                         type="text"
                         placeholder="My Awesome Server"
-                        class="border border-black/5 bg-black/2 text-black text-sm dark:border-white/5 dark:bg-white/2 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all placeholder:text-gray-400"
+                        class="border border-white/5 bg-white/2 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-gray-400"
                     />
                 </div>
 
@@ -197,7 +197,7 @@ const handleSave = async () => {
                     type="button"
                     :disabled="isSaving"
                     @click="handleClose"
-                    class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
+                    class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
                 >
                     Cancel
                 </button>
@@ -205,7 +205,7 @@ const handleSave = async () => {
                     type="button"
                     :disabled="isSaving || !name.trim() || !javaVersion"
                     @click="handleSave"
-                    class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-white text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 >
                     <Loader2 v-if="isSaving" :size="12" class="animate-spin" />
                     <Save v-else :size="12" />

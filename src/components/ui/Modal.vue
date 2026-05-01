@@ -6,6 +6,7 @@ interface Props {
     isOpen: boolean;
     layoutId?: string;
     anchorEl?: HTMLElement | null;
+    originEl?: HTMLElement | null;
 }
 
 const props = defineProps<Props>();
@@ -145,9 +146,10 @@ const onEnter = async (el: Element, done: () => void) => {
     updatePosition();
     await nextTick();
 
-    const anchorRect = props.anchorEl?.getBoundingClientRect();
+    const animOrigin = props.originEl ?? props.anchorEl;
+    const anchorRect = animOrigin?.getBoundingClientRect();
 
-    if (anchorRect && props.layoutId) {
+    if (anchorRect && (props.layoutId || props.originEl)) {
         const finalRect = target.getBoundingClientRect();
 
         const scaleX = anchorRect.width / finalRect.width;
@@ -161,11 +163,6 @@ const onEnter = async (el: Element, done: () => void) => {
         const deltaX = anchorCenterX - targetCenterX;
         const deltaY = anchorCenterY - targetCenterY;
 
-        const anchorBg = window.getComputedStyle(
-            props.anchorEl!,
-        ).backgroundColor;
-        const targetBg = window.getComputedStyle(target).backgroundColor;
-
         gsap.fromTo(
             target,
             {
@@ -173,10 +170,8 @@ const onEnter = async (el: Element, done: () => void) => {
                 y: deltaY,
                 scaleX: scaleX,
                 scaleY: scaleY,
-                opacity: 1,
-                backgroundColor: anchorBg,
+                opacity: 0,
                 transformOrigin: "center center",
-                borderRadius: "24px",
             },
             {
                 x: 0,
@@ -184,14 +179,11 @@ const onEnter = async (el: Element, done: () => void) => {
                 scaleX: 1,
                 scaleY: 1,
                 opacity: 1,
-                backgroundColor: targetBg,
-                borderRadius: "24px",
-                duration: 0.3,
+                duration: 0.35,
                 ease: "power2.out",
                 onComplete: () => {
                     gsap.set(target, {
-                        clearProps:
-                            "transform,transformOrigin,background-color",
+                        clearProps: "transform,transformOrigin",
                     });
                     done();
                 },
@@ -214,9 +206,10 @@ const onEnter = async (el: Element, done: () => void) => {
 
 const onLeave = (el: Element, done: () => void) => {
     const target = el as HTMLElement;
-    const anchorRect = props.anchorEl?.getBoundingClientRect();
+    const animOrigin = props.originEl ?? props.anchorEl;
+    const anchorRect = animOrigin?.getBoundingClientRect();
 
-    if (anchorRect && props.layoutId) {
+    if (anchorRect && (props.layoutId || props.originEl)) {
         const finalRect = target.getBoundingClientRect();
 
         const scaleX = anchorRect.width / finalRect.width;
@@ -230,19 +223,13 @@ const onLeave = (el: Element, done: () => void) => {
         const deltaX = anchorCenterX - targetCenterX;
         const deltaY = anchorCenterY - targetCenterY;
 
-        const anchorBg = window.getComputedStyle(
-            props.anchorEl!,
-        ).backgroundColor;
-
         gsap.to(target, {
             x: deltaX,
             y: deltaY,
             scaleX: scaleX,
             scaleY: scaleY,
-            backgroundColor: anchorBg,
-            opacity: 1,
+            opacity: 0,
             duration: 0.3,
-            borderRadius: "24px",
             transformOrigin: "center center",
             ease: "power2.in",
             onComplete: done,
@@ -279,9 +266,7 @@ export default {
                 v-if="isOpen"
                 :class="[
                     'fixed inset-0 z-40',
-                    isAnchored
-                        ? 'bg-transparent'
-                        : 'bg-black/40 backdrop-blur-[20px]',
+                    isAnchored ? 'bg-transparent' : 'bg-black/70',
                     $attrs.class,
                 ]"
                 @click="emit('close')"
@@ -295,10 +280,10 @@ export default {
                 v-bind="$attrs"
                 :style="positionStyle"
                 :class="[
-                    'absolute z-50 bg-white/70 dark:bg-[#1c1c1e]/75 backdrop-blur-md shadow-xl overflow-hidden',
+                    'absolute z-50 bg-[#111111] shadow-2xl overflow-hidden',
                     !isAnchored
-                        ? 'w-full md:min-w-[320px] md:w-auto rounded-[24px]'
-                        : 'w-full md:min-w-[192px] md:w-auto rounded-xl',
+                        ? 'w-full md:min-w-[320px] md:w-auto rounded-[20px]'
+                        : 'w-full md:min-w-48 md:w-auto rounded-xl',
                     $attrs.class,
                 ]"
             >
@@ -307,10 +292,3 @@ export default {
         </Transition>
     </Teleport>
 </template>
-
-<style scoped>
-.backdrop-blur-md {
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-}
-</style>

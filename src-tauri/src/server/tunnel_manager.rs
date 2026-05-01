@@ -180,7 +180,7 @@ pub async fn start_tunnel(
     let proj_dirs = ProjectDirs::from("com", "localcraft", "LocalCraft")
         .ok_or("Failed to determine app directory")?;
     let tools_dir = proj_dirs.data_dir().join("tools");
-    let playit_path = tools_dir.join("playit.exe");
+    let playit_path = tools_dir.join(SoftwareManager::playit_binary_name()?);
 
     if !playit_path.exists() {
         SoftwareManager::download_playit(&handle).await?;

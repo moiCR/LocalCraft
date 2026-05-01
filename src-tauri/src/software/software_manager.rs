@@ -11,6 +11,33 @@ use crate::server::{server::Server, server_manager::ProgressPayload};
 pub struct SoftwareManager {}
 
 impl SoftwareManager {
+    pub fn playit_binary_name() -> Result<&'static str, String> {
+        match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => Ok("playit.exe"),
+            ("linux", "x86_64") => Ok("playit-linux-amd64"),
+            ("linux", "aarch64") => Ok("playit-linux-aarch64"),
+            ("linux", "arm") => Ok("playit-linux-armv7"),
+            ("linux", "x86") => Ok("playit-linux-i686"),
+            (os, arch) => Err(format!("Unsupported playit platform: {} {}", os, arch)),
+        }
+    }
+
+    fn playit_download_url() -> Result<String, String> {
+        let asset = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => "playit-windows-x86_64.exe",
+            ("linux", "x86_64") => "playit-linux-amd64",
+            ("linux", "aarch64") => "playit-linux-aarch64",
+            ("linux", "arm") => "playit-linux-armv7",
+            ("linux", "x86") => "playit-linux-i686",
+            (os, arch) => return Err(format!("Unsupported playit platform: {} {}", os, arch)),
+        };
+
+        Ok(format!(
+            "https://github.com/playit-cloud/playit-agent/releases/latest/download/{}",
+            asset
+        ))
+    }
+
     async fn download_server_jar(
         handle: &AppHandle,
         download_url: &String,
@@ -331,7 +358,8 @@ impl SoftwareManager {
             .await
             .map_err(|e| format!("Failed to create tools directory: {}", e))?;
 
-        let exe_path = tools_dir.join("playit.exe");
+        let binary_name = Self::playit_binary_name()?;
+        let exe_path = tools_dir.join(binary_name);
         if exe_path.exists() {
             return Ok(exe_path);
         }
@@ -339,14 +367,14 @@ impl SoftwareManager {
         let _ = handle.emit(
             "creation-progress",
             ProgressPayload {
-                process: "Downloading playit.exe...".to_string(),
+                process: format!("Downloading {}...", binary_name),
                 percentage: None,
             },
         );
 
-        let url = "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-windows-x86_64.exe";
+        let url = Self::playit_download_url()?;
 
-        let mut response = reqwest::get(url)
+        let mut response = reqwest::get(&url)
             .await
             .map_err(|e| format!("Failed to download playit: {}", e))?;
 
@@ -367,7 +395,7 @@ impl SoftwareManager {
                 let _ = handle.emit(
                     "creation-progress",
                     ProgressPayload {
-                        process: "Downloading playit.exe...".to_string(),
+                        process: format!("Downloading {}...", binary_name),
                         percentage: Some(pct),
                     },
                 );
@@ -376,12 +404,22 @@ impl SoftwareManager {
 
         fs::write(&exe_path, bytes)
             .await
-            .map_err(|e| format!("Failed to write playit.exe: {}", e))?;
+            .map_err(|e| format!("Failed to write {}: {}", binary_name, e))?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let permissions = std::fs::Permissions::from_mode(0o755);
+            fs::set_permissions(&exe_path, permissions)
+                .await
+                .map_err(|e| format!("Failed to mark {} as executable: {}", binary_name, e))?;
+        }
 
         let _ = handle.emit(
             "creation-progress",
             ProgressPayload {
-                process: "Playit.exe downloaded successfully.".to_string(),
+                process: format!("{} downloaded successfully.", binary_name),
                 percentage: Some(100.0),
             },
         );

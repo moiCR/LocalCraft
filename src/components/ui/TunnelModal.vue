@@ -175,16 +175,16 @@ watch(
             <header class="relative flex items-center justify-center py-0.5">
                 <button
                     @click="emit('close')"
-                    class="absolute left-0 p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+                    class="absolute left-0 p-1.5 rounded-full hover:bg-white/5 transition-colors group"
                 >
                     <XIcon
                         :size="16"
-                        class="text-black/60 dark:text-white/60 group-hover:text-black dark:group-hover:text-white"
+                        class="text-white/60 group-hover:text-white"
                     />
                 </button>
 
                 <h2
-                    class="text-base font-bold tracking-tight text-black dark:text-white"
+                    class="text-base font-bold tracking-tight text-white"
                 >
                     Playit Tunnel
                 </h2>
@@ -198,7 +198,7 @@ watch(
                         'relative flex flex-col items-center justify-center gap-3 py-5 px-4 rounded-3xl border-2 transition-all duration-300',
                         status.active
                             ? 'border-blue-500/20 bg-blue-500/5'
-                            : 'border-black/10 dark:border-white/10 bg-black/2 dark:bg-white/2',
+                            : 'border-white/10 bg-white/2',
                     ]"
                 >
                     <!-- Globe Icon -->
@@ -207,7 +207,7 @@ watch(
                             'w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-500',
                             status.active
                                 ? 'bg-blue-500 text-white scale-110 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
-                                : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40',
+                                : 'bg-white/5 text-white/40',
                         ]"
                     >
                         <GlobeIcon :size="20" />
@@ -240,7 +240,7 @@ watch(
 
                         <p
                             v-if="!status.active"
-                            class="text-[11px] text-black/40 dark:text-white/40"
+                            class="text-[11px] text-white/40"
                         >
                             The global tunnel is currently offline
                         </p>
@@ -251,13 +251,13 @@ watch(
                             class="mt-2 flex items-center gap-2 w-full"
                         >
                             <div
-                                class="flex-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 font-mono text-[11px] text-blue-500 dark:text-blue-400 truncate text-center"
+                                class="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 font-mono text-[11px] text-blue-400 truncate text-center"
                             >
                                 {{ status.address }}
                             </div>
                             <Button
                                 @click="copyAddress"
-                                class="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 shrink-0"
+                                class="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-90 shrink-0"
                             >
                                 <CheckIcon
                                     v-if="copied"
@@ -267,7 +267,7 @@ watch(
                                 <CopyIcon
                                     v-else
                                     :size="14"
-                                    class="text-black/60 dark:text-white/60"
+                                    class="text-white/60"
                                 />
                             </Button>
                         </div>
@@ -279,7 +279,7 @@ watch(
                                 !status.address &&
                                 !status.claim_url
                             "
-                            class="mt-2 text-[10px] italic text-black/40 dark:text-white/40"
+                            class="mt-2 text-[10px] italic text-white/40"
                         >
                             Establishing secure connection...
                         </p>
@@ -296,7 +296,7 @@ watch(
                     >
                         <div
                             v-if="isLoading"
-                            class="absolute inset-0 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center gap-2 z-10 px-6 text-center"
+                            class="absolute inset-0 bg-[#1c1c1e]/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center gap-2 z-10 px-6 text-center"
                         >
                             <Loader2
                                 :size="20"
@@ -305,13 +305,13 @@ watch(
 
                             <template v-if="downloadProgress.process">
                                 <p
-                                    class="text-xs font-bold text-black dark:text-white uppercase tracking-wider"
+                                    class="text-xs font-bold text-white uppercase tracking-wider"
                                 >
                                     {{ downloadProgress.process }}
                                 </p>
                                 <div
                                     v-if="downloadProgress.percentage !== null"
-                                    class="w-full h-1 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden"
+                                    class="w-full h-1 bg-white/10 rounded-full overflow-hidden"
                                 >
                                     <div
                                         class="h-full bg-blue-500 transition-all duration-300"
@@ -322,7 +322,7 @@ watch(
                                 </div>
                                 <p
                                     v-if="downloadProgress.percentage !== null"
-                                    class="text-[10px] font-mono text-black/40 dark:text-white/40"
+                                    class="text-[10px] font-mono text-white/40"
                                 >
                                     {{
                                         Math.round(downloadProgress.percentage)
@@ -331,7 +331,7 @@ watch(
                             </template>
                             <p
                                 v-else
-                                class="text-xs font-bold text-black dark:text-white animate-pulse"
+                                class="text-xs font-bold text-white animate-pulse"
                             >
                                 Processing...
                             </p>
@@ -355,7 +355,7 @@ watch(
                             Authentication Required
                         </p>
                         <p
-                            class="text-[10px] text-black/50 dark:text-white/50 leading-snug mt-0.5"
+                            class="text-[10px] text-white/50 leading-snug mt-0.5"
                         >
                             Link your agent to your Playit.gg account.
                         </p>
@@ -376,7 +376,7 @@ watch(
                 >
                     <AlertCircle :size="16" class="text-amber-500 shrink-0" />
                     <p
-                        class="text-[10px] text-amber-600 dark:text-amber-400 leading-snug"
+                        class="text-[10px] text-amber-400 leading-snug"
                     >
                         Server is offline. Start your server first to enable the
                         tunnel.
@@ -386,14 +386,14 @@ watch(
                 <!-- Generic Help Alert -->
                 <div
                     v-else
-                    class="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 rounded-2xl"
+                    class="flex items-center gap-3 p-3 bg-white/5 rounded-2xl"
                 >
                     <AlertCircle
                         :size="16"
-                        class="text-black/30 dark:text-white/30 shrink-0"
+                        class="text-white/30 shrink-0"
                     />
                     <p
-                        class="text-[10px] text-black/40 dark:text-white/40 leading-snug"
+                        class="text-[10px] text-white/40 leading-snug"
                     >
                         Starts a global tunnel so anyone can connect using the
                         address above.
@@ -409,7 +409,7 @@ watch(
                         'w-full py-3 flex items-center justify-center gap-2 rounded-2xl border transition-all duration-300',
                         serverActive
                             ? 'bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 border-white/10 active:scale-95'
-                            : 'bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/30 border-black/10 dark:border-white/10 cursor-not-allowed',
+                            : 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed',
                     ]"
                 >
                     <GlobeIcon

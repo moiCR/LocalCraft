@@ -40,12 +40,12 @@ const handleConfirm = () => {
       <header class="relative flex flex-col items-center justify-center pt-2">
         <button 
           @click="emit('close')"
-          class="absolute -top-1 -left-1 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+          class="absolute -top-1 -left-1 p-2 rounded-full hover:bg-white/5 transition-colors group"
         >
-          <X :size="18" class="text-black/60 dark:text-white/60 group-hover:text-black dark:group-hover:text-white" />
+          <X :size="18" class="text-white/60 group-hover:text-white" />
         </button>
         
-        <h2 class="text-xl font-bold tracking-tight text-black dark:text-white">
+        <h2 class="text-xl font-bold tracking-tight text-white">
           {{ type === 'file' ? 'New File' : 'New Folder' }}
         </h2>
       </header>
@@ -53,11 +53,11 @@ const handleConfirm = () => {
       <!-- Content -->
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-2">
-          <label class="text-xs font-semibold text-black/40 dark:text-white/40 uppercase tracking-widest ml-1">
+          <label class="text-xs font-semibold text-white/40 uppercase tracking-widest ml-1">
             {{ type === 'file' ? 'File Name' : 'Folder Name' }}
           </label>
           <div class="relative group">
-            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40 group-focus-within:text-brand transition-colors">
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-brand transition-colors">
               <FileText v-if="type === 'file'" :size="18" />
               <Folder v-else :size="18" />
             </div>
@@ -65,7 +65,7 @@ const handleConfirm = () => {
               ref="inputRef"
               v-model="name"
               :placeholder="type === 'file' ? 'Ej. server.properties' : 'Ej. mods, config...'"
-              class="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-sm text-black dark:text-white placeholder-black/20 dark:placeholder-white/20 outline-none focus:border-brand/50 focus:ring-4 focus:ring-brand/10 transition-all font-mono"
+              class="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-white/20 outline-none focus:border-brand/50 focus:ring-4 focus:ring-brand/10 transition-all font-mono"
               @keyup.enter="handleConfirm"
             />
           </div>

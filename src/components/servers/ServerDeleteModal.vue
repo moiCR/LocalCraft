@@ -73,7 +73,7 @@ const handleDelete = async () => {
                 <Button 
                     @click="handleDelete" 
                     :disabled="isDeleting"
-                    class="bg-red-500 hover:bg-red-600 dark:bg-red-500 dark:hover:bg-red-600 text-white flex items-center justify-center gap-2"
+                    class="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
                 >
                     <RefreshCcw v-if="isDeleting" :size="16" class="animate-spin" />
                     <span class="text-sm">{{ isDeleting ? 'Deleting...' : 'Delete Server' }}</span>

@@ -82,16 +82,16 @@ const triggerFileInput = () => {
             >
                 <button
                     @click="emit('close')"
-                    class="absolute -top-1 -left-1 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+                    class="absolute -top-1 -left-1 p-2 rounded-full hover:bg-white/5 transition-colors group"
                 >
                     <X
                         :size="18"
-                        class="text-black/60 dark:text-white/60 group-hover:text-black dark:group-hover:text-white"
+                        class="text-white/60 group-hover:text-white"
                     />
                 </button>
 
                 <h2
-                    class="text-xl font-bold tracking-tight text-black dark:text-white"
+                    class="text-xl font-bold tracking-tight text-white"
                 >
                     Upload Files
                 </h2>
@@ -121,7 +121,7 @@ const triggerFileInput = () => {
                             'flex flex-col items-center justify-center gap-4 py-10 px-6 rounded-[32px] border-2 border-dashed transition-all duration-300',
                             isDragging
                                 ? 'border-brand bg-brand/5 scale-[0.98]'
-                                : 'border-black/10 dark:border-white/10 hover:border-brand/40 bg-black/2 dark:bg-white/2 hover:bg-black/4 dark:hover:bg-white/4',
+                                : 'border-white/10 hover:border-brand/40 bg-white/2 hover:bg-white/4',
                         ]"
                     >
                         <div
@@ -129,7 +129,7 @@ const triggerFileInput = () => {
                                 'w-12 h-12 rounded-full flex items-center justify-center transition-transform duration-500',
                                 isDragging
                                     ? 'bg-brand text-black scale-110'
-                                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40',
+                                    : 'bg-white/5 text-white/40',
                             ]"
                         >
                             <Upload :size="24" />
@@ -137,12 +137,12 @@ const triggerFileInput = () => {
 
                         <div class="text-center">
                             <p
-                                class="text-base font-semibold text-black dark:text-white"
+                                class="text-base font-semibold text-white"
                             >
                                 Drag and drop files here
                             </p>
                             <p
-                                class="text-xs text-black/40 dark:text-white/40 mt-1"
+                                class="text-xs text-white/40 mt-1"
                             >
                                 or click to select manually
                             </p>
@@ -160,14 +160,14 @@ const triggerFileInput = () => {
                     >
                         <div
                             v-if="uploading"
-                            class="absolute inset-0 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-sm rounded-[32px] flex flex-col items-center justify-center gap-4 z-10"
+                            class="absolute inset-0 bg-[#1c1c1e]/80 backdrop-blur-sm rounded-[32px] flex flex-col items-center justify-center gap-4 z-10"
                         >
                             <Loader2
                                 :size="32"
                                 class="animate-spin text-brand"
                             />
                             <p
-                                class="text-base font-bold text-black dark:text-white animate-pulse"
+                                class="text-base font-bold text-white animate-pulse"
                             >
                                 Subiendo...
                             </p>
@@ -177,11 +177,11 @@ const triggerFileInput = () => {
 
                 <!-- Support Text -->
                 <div
-                    class="flex items-center gap-3 p-4 bg-black/5 dark:bg-white/5 rounded-2xl"
+                    class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl"
                 >
                     <AlertCircle :size="18" class="text-brand shrink-0" />
                     <p
-                        class="text-xs text-black/60 dark:text-white/60 leading-relaxed"
+                        class="text-xs text-white/60 leading-relaxed"
                     >
                         You can upload multiple files at once. The progress will
                         be updated in real time.
