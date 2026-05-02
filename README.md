@@ -6,7 +6,7 @@
     <strong>A high-performance, modern Minecraft server manager built with Tauri and Vue.</strong>
   </p>
 
-  [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/your-username/localcraft-vuew)
+  [![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/your-username/localcraft-vuew)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#)
 </div>
