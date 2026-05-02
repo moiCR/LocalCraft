@@ -47,20 +47,6 @@ This is our roadmap to reach version 1.0.
   - [ ] Integration with the **CurseForge** API.
   - [ ] One-click installation.
 
----
-
-## 📸 Image Gallery
-
-Below are the key components of the application:
-
-| Component | Screenshot |
-| :--- | :--- |
-| **Dashboard** | ![Dashboard](public/dashboard.png) |
-| **Server Creation** | ![Creation Modal](public/dashboard_with_modal.png) |
-| **Java Configuration** | (Coming Soon) |
-
----
-
 ## 🛠️ Tech Stack
 
 - **Frontend**: [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) + [TypeScript](https://www.typescriptlang.org/)
@@ -69,24 +55,6 @@ Below are the key components of the application:
 - **Animations**: [GSAP](https://greensock.com/gsap/)
 - **Icons**: Internal SVGs + Lucide-Vue
 
-## 📦 Installation (Development)
-
-To run the project locally:
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/moiCR/LocalCraft.git
-    ```
-2.  **Install dependencies:**
-    ```bash
-    bun install
-    ```
-3.  **Run in dev mode:**
-    ```bash
-    bun tauri dev
-    ```
-
----
 
 <div align="center">
   Made with ❤️ by Moisés Marenco Vives

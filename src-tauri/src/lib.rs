@@ -89,7 +89,6 @@ pub fn run() {
     ensure_app_dirs().unwrap();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .manage(server_manager)
         .manage(tunnel_manager)

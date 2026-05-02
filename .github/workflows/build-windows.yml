@@ -36,6 +36,13 @@ jobs:
       - name: "Install dependencies"
         run: bun install --frozen-lockfile
 
+      - name: "Load changelog"
+        shell: pwsh
+        run: |
+          "RELEASE_BODY<<EOF" >> $env:GITHUB_ENV
+          Get-Content -Raw CHANGELOG.md >> $env:GITHUB_ENV
+          "EOF" >> $env:GITHUB_ENV
+
       - name: "Build App and Upload Release"
         uses: tauri-apps/tauri-action@v0
         env:
@@ -45,7 +52,7 @@ jobs:
         with:
           tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
           releaseName: "LocalCraft ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}"
-          releaseBody: "Windows build for LocalCraft."
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: false
           prerelease: false
           args: "--target x86_64-pc-windows-msvc"

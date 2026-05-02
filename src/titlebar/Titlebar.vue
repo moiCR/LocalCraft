@@ -15,6 +15,7 @@ const isServerRoute = computed(() =>
     route.name?.toString().startsWith("server-"),
 );
 
+
 const baseTitle = computed(() => {
     if (isServerRoute.value) return "Manage Server";
     switch (route.name) {
@@ -80,6 +81,7 @@ const subTitle = computed(() => {
         </div>
 
         <div class="flex h-full">
+
             <button
                 @click="minimize"
                 class="px-4 h-full hover:bg-white/10 transition-colors rounded-full text-gray-400 hover:text-white"
