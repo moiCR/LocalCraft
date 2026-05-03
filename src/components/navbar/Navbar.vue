@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {
     AlertCircle,
-    CheckCircle2,
     CircleArrowDown,
     LoaderCircle,
 } from "@lucide/vue";
-import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import gsap from "gsap";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
@@ -14,7 +14,7 @@ const indicatorRef = ref<HTMLElement | null>(null);
 const activeTarget = ref<HTMLElement | null>(null);
 const availableUpdate = ref<Update | null>(null);
 const updateStatus = ref<
-    "idle" | "checking" | "available" | "downloading" | "installed" | "unavailable" | "error"
+    "idle" | "checking" | "available" | "downloading" | "unavailable" | "error"
 >("idle");
 const updateError = ref("");
 const downloadedBytes = ref(0);
@@ -28,27 +28,21 @@ const updateProgress = computed(() => {
     return Math.min(100, Math.round((downloadedBytes.value / totalBytes.value) * 100));
 });
 
-const showUpdater = computed(() =>
-    updateStatus.value === "available" ||
-    updateStatus.value === "downloading" ||
-    updateStatus.value === "installed" ||
-    updateStatus.value === "error"
-);
+const showUpdater = computed(() => availableUpdate.value !== null || updateStatus.value === "downloading");
 
 const updaterTooltip = computed(() => {
-    if (updateStatus.value === "checking") return "Checking for updates";
+    if (updateStatus.value === "checking") return "Buscando actualizaciones";
     if (updateStatus.value === "available" && availableUpdate.value) {
-        return `Install ${availableUpdate.value.version}`;
+        return `Instalar ${availableUpdate.value.version}`;
     }
     if (updateStatus.value === "downloading") {
         return updateProgress.value === null
-            ? "Downloading update"
-            : `Downloading ${updateProgress.value}%`;
+            ? "Descargando actualizacion"
+            : `Descargando ${updateProgress.value}%`;
     }
-    if (updateStatus.value === "installed") return "Update installed. Restart LocalCraft";
-    if (updateStatus.value === "unavailable") return "LocalCraft is up to date";
-    if (updateStatus.value === "error") return updateError.value || "Updater error";
-    return "Check for updates";
+    if (updateStatus.value === "unavailable") return "LocalCraft esta actualizado";
+    if (updateStatus.value === "error") return updateError.value || "Error del updater";
+    return "Buscar actualizaciones";
 });
 
 const clearStatusReset = () => {
@@ -88,17 +82,6 @@ const checkForUpdate = async (silent = false) => {
     }
 };
 
-const handleDownloadEvent = (event: DownloadEvent) => {
-    if (event.event === "Started") {
-        totalBytes.value = event.data.contentLength ?? null;
-        downloadedBytes.value = 0;
-    }
-
-    if (event.event === "Progress") {
-        downloadedBytes.value += event.data.chunkLength;
-    }
-};
-
 const installUpdate = async () => {
     if (!availableUpdate.value || updateStatus.value === "downloading") return;
 
@@ -109,10 +92,30 @@ const installUpdate = async () => {
     updateStatus.value = "downloading";
 
     try {
-        await availableUpdate.value.downloadAndInstall(handleDownloadEvent);
-        await availableUpdate.value.close();
-        availableUpdate.value = null;
-        updateStatus.value = "installed";
+        const update = availableUpdate.value;
+        console.log(
+            `found update ${update.version} from ${update.date} with notes ${update.body}`,
+        );
+
+        await update.downloadAndInstall((event) => {
+            switch (event.event) {
+                case "Started":
+                    totalBytes.value = event.data.contentLength ?? null;
+                    downloadedBytes.value = 0;
+                    console.log(`started downloading ${event.data.contentLength} bytes`);
+                    break;
+                case "Progress":
+                    downloadedBytes.value += event.data.chunkLength;
+                    console.log(`downloaded ${downloadedBytes.value} from ${totalBytes.value}`);
+                    break;
+                case "Finished":
+                    console.log("download finished");
+                    break;
+            }
+        });
+
+        console.log("update installed");
+        await relaunch();
     } catch (error) {
         updateError.value = error instanceof Error ? error.message : String(error);
         updateStatus.value = "error";
@@ -196,7 +199,6 @@ onUnmounted(() => {
     resizeObserver?.disconnect();
     if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
     clearStatusReset();
-    if (availableUpdate.value) void availableUpdate.value.close();
 });
 </script>
 
@@ -219,14 +221,10 @@ onUnmounted(() => {
                     <button
                         type="button"
                         :title="updaterTooltip"
-                        :disabled="
-                            updateStatus === 'checking' ||
-                            updateStatus === 'downloading' ||
-                            updateStatus === 'installed'
-                        "
+                        :disabled="updateStatus === 'checking' || updateStatus === 'downloading'"
                         class="relative flex h-11 min-w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 text-white/70 transition-all duration-300 hover:border-green-400/30 hover:bg-green-400/10 hover:text-green-300 disabled:cursor-default disabled:hover:border-white/10 disabled:hover:bg-white/5"
                         :class="{
-                            'border-green-400/40 bg-green-400/10 text-green-300': updateStatus === 'available' || updateStatus === 'installed',
+                            'border-green-400/40 bg-green-400/10 text-green-300': updateStatus === 'available',
                             'border-red-400/40 bg-red-400/10 text-red-300': updateStatus === 'error',
                         }"
                         @click="handleUpdaterClick"
@@ -235,10 +233,6 @@ onUnmounted(() => {
                             v-if="updateStatus === 'checking' || updateStatus === 'downloading'"
                             :size="22"
                             class="animate-spin"
-                        />
-                        <CheckCircle2
-                            v-else-if="updateStatus === 'installed'"
-                            :size="22"
                         />
                         <AlertCircle
                             v-else-if="updateStatus === 'error'"
