@@ -18,8 +18,8 @@ const props = defineProps<Props>();
         class="group flex flex-row p-2 items-center gap-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
         :class="
             props.active
-                ? 'bg-white/10'
-                : 'bg-black/40 hover:bg-white/5 hover:scale-y-[0.95] hover:scale-x-[1.05]'
+                ? 'border border-brand/30 bg-brand/15 shadow-[0_3px_0_rgba(0,0,0,0.32)]'
+                : 'border border-white/10 bg-black/35 hover:bg-white/5 hover:scale-y-[0.95] hover:scale-x-[1.05]'
         "
     >
         <component

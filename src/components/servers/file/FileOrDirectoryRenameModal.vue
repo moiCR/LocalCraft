@@ -70,11 +70,11 @@ function close() {
     <div class="flex flex-col gap-5 p-5 w-72">
       <!-- Header -->
       <div class="flex items-center gap-2.5">
-        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
-          <Pencil :size="14" class="text-white/60" />
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl border border-brand/20 bg-brand/10">
+          <Pencil :size="14" class="text-brand" />
         </div>
         <div>
-          <p class="text-white text-sm font-semibold leading-none">Rename</p>
+          <p class="text-sm font-black leading-none text-white">Rename</p>
           <p class="text-white/40 text-xs mt-1 truncate max-w-[180px]">{{ file?.name }}</p>
         </div>
       </div>
@@ -83,8 +83,7 @@ function close() {
       <input
         ref="inputRef"
         v-model="value"
-        class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none
-               focus:border-blue-500/50 focus:bg-white/8 transition-all duration-200 placeholder-white/25"
+        class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition-all duration-200 placeholder-white/25 focus:border-brand/50 focus:bg-white/10 focus:ring-4 focus:ring-brand/10"
         placeholder="New name..."
         @keyup.enter="confirm"
         @keyup.escape="close"
@@ -93,14 +92,13 @@ function close() {
       <!-- Actions -->
       <div class="flex justify-end gap-2">
         <button
-          class="text-sm text-white/40 hover:text-white/70 px-3 py-1.5 rounded-lg transition-colors duration-150"
+          class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-bold text-white/40 transition-colors duration-150 hover:bg-white/10 hover:text-white/70"
           @click="close"
         >
           Cancel
         </button>
         <button
-          class="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500
-                 px-4 py-1.5 rounded-lg transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none"
+          class="rounded-xl border-2 border-brand/70 bg-brand px-4 py-1.5 text-sm font-black text-black shadow-[0_3px_0_#060806] transition-all duration-150 hover:bg-brand/90 active:translate-y-0.5 active:shadow-[0_1px_0_#060806] disabled:pointer-events-none disabled:opacity-40"
           :disabled="!value.trim() || value.trim() === file?.name"
           @click="confirm"
         >

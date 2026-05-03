@@ -229,15 +229,15 @@ onMounted(loadDir);
 </script>
 
 <template>
-    <div class="flex flex-col w-full h-full overflow-hidden">
+    <div class="flex h-full w-full flex-col overflow-hidden">
         <!-- Toolbar -->
         <section
-            class="flex flex-row px-4 py-3 border-b border-white/10 gap-2 items-center shrink-0"
+            class="flex shrink-0 flex-row items-center gap-2 border-b border-[#26382d] bg-[#151815]/70 px-4 py-3"
         >
             <Button
                 :tooltip="'Back'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 :disabled="pathStack.length === 0"
                 @click="goBack"
             >
@@ -247,7 +247,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'Root'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 :disabled="pathStack.length === 0"
                 @click="goHome"
             >
@@ -256,7 +256,7 @@ onMounted(loadDir);
 
             <!-- Breadcrumbs -->
             <div
-                class="flex items-center gap-1 flex-1 min-w-0 text-white/60 font-mono text-sm"
+                class="flex min-w-0 flex-1 items-center gap-1 rounded-2xl border border-white/10 bg-[#0c0f0d] px-3 py-2 font-mono text-sm text-white/60"
             >
                 <template v-for="(crumb, i) in breadcrumbs" :key="i">
                     <span
@@ -282,7 +282,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'Open Folder'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 @click="openFolder"
             >
                 <Folder :size="16" />
@@ -291,7 +291,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'New file'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 @click="
                     (e: MouseEvent) => {
                         newFileAnchorEl = e.currentTarget as HTMLElement;
@@ -306,7 +306,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'New folder'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 @click="
                     (e: MouseEvent) => {
                         newFolderAnchorEl = e.currentTarget as HTMLElement;
@@ -321,7 +321,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'Upload files'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 @click="
                     (e: MouseEvent) => {
                         uploadAnchorEl = e.currentTarget as HTMLElement;
@@ -336,7 +336,7 @@ onMounted(loadDir);
             <Button
                 :tooltip="'Refresh'"
                 :tooltip-position="'bottom'"
-                :class="'bg-transparent hover:bg-white/10 px-2! py-1.5!'"
+                :class="'border border-white/10 bg-white/5 hover:bg-white/10 px-2! py-1.5!'"
                 @click="loadDir"
             >
                 <RefreshCw :size="16" :class="loading ? 'animate-spin' : ''" />
@@ -346,7 +346,7 @@ onMounted(loadDir);
         <!-- File list -->
         <section class="flex-1 overflow-hidden p-4">
             <div
-                class="flex flex-col gap-1 w-full h-full border border-white/5 rounded-xl p-2 overflow-y-auto scroll-smooth"
+                class="flex h-full w-full flex-col gap-1 overflow-y-auto scroll-smooth rounded-[24px] border-2 border-[#223127] bg-[#0c0f0d] p-2 shadow-[0_6px_0_#060806,inset_0_1px_0_rgba(255,255,255,0.03)]"
             >
                 <!-- Loading -->
                 <div

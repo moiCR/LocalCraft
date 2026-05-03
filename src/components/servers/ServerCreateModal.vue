@@ -187,7 +187,7 @@ const handleCreate = async () => {
     >
         <div class="flex flex-col p-6 gap-6">
             <!-- Header -->
-            <h3 class="text-base font-bold text-white tracking-tight transition-all">
+            <h3 class="text-base font-black text-white tracking-tight transition-all">
                 {{ isCreating ? 'Creating Server' : 'New Server' }}
             </h3>
 
@@ -201,7 +201,7 @@ const handleCreate = async () => {
                         v-model="name"
                         type="text"
                         placeholder="My Awesome Server"
-                        class="border border-white/5 bg-white/2 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-gray-400"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white transition-all placeholder:text-gray-500 focus:border-brand/50 focus:outline-none focus:ring-4 focus:ring-brand/10"
                     />
                 </div>
 
@@ -243,7 +243,7 @@ const handleCreate = async () => {
                         type="button"
                         :disabled="isLoading"
                         @click="handleClose"
-                        class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
+                        class="flex-1 cursor-pointer rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white/45 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
                     >
                         Cancel
                     </button>
@@ -251,7 +251,7 @@ const handleCreate = async () => {
                         type="button"
                         :disabled="isLoading || !canCreate()"
                         @click="handleCreate"
-                        class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-white text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        class="flex-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-brand/70 bg-brand px-4 py-2.5 text-sm font-black text-black shadow-[0_4px_0_#060806] transition-all hover:bg-brand/90 active:translate-y-0.5 active:shadow-[0_1px_0_#060806] disabled:cursor-not-allowed disabled:opacity-30"
                     >
                         <Loader2 v-if="isLoading" :size="12" class="animate-spin" />
                         <Plus v-else :size="12" />
@@ -265,8 +265,8 @@ const handleCreate = async () => {
                 <div class="flex flex-col items-center justify-center py-6 gap-6">
                     <div class="relative flex items-center justify-center">
                         <div class="absolute inset-0 bg-white/5 rounded-full scale-150 animate-pulse"></div>
-                        <div class="relative p-4 bg-white/5 rounded-2xl">
-                            <ServerIcon :size="32" class="text-white opacity-40" />
+                        <div class="relative rounded-[20px] border border-brand/20 bg-brand/10 p-4">
+                            <ServerIcon :size="32" class="text-brand opacity-80" />
                         </div>
                     </div>
 
@@ -278,7 +278,7 @@ const handleCreate = async () => {
                             </div>
                             <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
                                 <div 
-                                    class="bg-white h-full transition-all duration-500 ease-out"
+                                    class="h-full bg-brand transition-all duration-500 ease-out"
                                     :style="{ width: `${progressPct}%` }"
                                 ></div>
                             </div>
@@ -292,7 +292,7 @@ const handleCreate = async () => {
                 <div v-if="error" class="mt-4 pt-2 border-t border-white/5">
                     <button
                         @click="isCreating = false"
-                        class="w-full text-xs font-bold py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+                        class="w-full rounded-xl bg-white/10 py-2 text-xs font-bold transition-all hover:bg-white/20"
                     >
                         Try Again
                     </button>

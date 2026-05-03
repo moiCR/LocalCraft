@@ -45,7 +45,7 @@ const handleConfirm = () => {
           <X :size="18" class="text-white/60 group-hover:text-white" />
         </button>
         
-        <h2 class="text-xl font-bold tracking-tight text-white">
+        <h2 class="text-xl font-black tracking-tight text-white">
           {{ type === 'file' ? 'New File' : 'New Folder' }}
         </h2>
       </header>
@@ -72,7 +72,7 @@ const handleConfirm = () => {
         </div>
 
         <Button 
-          class="w-full py-3.5 bg-brand text-black text-sm font-bold rounded-xl hover:bg-brand/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand/20"
+          class="w-full rounded-xl border-2 border-brand/70 bg-brand py-3.5 text-sm font-black text-black shadow-[0_4px_0_#060806] transition-all hover:bg-brand/90 active:translate-y-0.5 active:shadow-[0_1px_0_#060806]"
           @click="handleConfirm"
         >
           {{ type === 'file' ? 'Create File' : 'Create Folder' }}

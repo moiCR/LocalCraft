@@ -1,14 +1,16 @@
-### What's New in v0.3.0
+### What's New in v0.4.0 (Codex Test)
 
-- Added Modrinth mod search and one-click installation.
-- Added automatic required dependency installation for Modrinth mods.
-- Added installed/not-installed filtering and pagination in the mods view.
+- Redesigned the app shell with a dark cartoon-minimal style.
+- Reworked the main navigation into a floating dock.
+- Moved the updater indicator from the navbar into the titlebar, and it now only appears when an update is available or downloading.
+- Refreshed server and Java item cards with integrated actions.
+- Restyled the server console, files, mods, list containers, and modals for a more consistent dark UI.
 
 ### Fixes
 
-- Fixed installed mods metadata syncing when deleting mods from the file manager.
+- Removed broken swipe/drag delete interactions from server and Java items.
+- Removed unused Java folder actions from the Java UI.
 
 ### Notes
 
-- This release is intended to verify that the v0.2.2 updater can install v0.3.0 and relaunch LocalCraft.
-- Windows releases now use this changelog as the release body.
+- This release focuses on the visual redesign and interaction cleanup for the main app experience.

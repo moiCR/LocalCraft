@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMounted, ref } from "vue";
 import JavaItem from "../components/java/JavaItem.vue";
 import JavaInstallModal from "../components/java/JavaInstallModal.vue";
-import { PlusIcon, RefreshCcw, Coffee, FolderOpen } from "@lucide/vue";
+import { PlusIcon, RefreshCcw, Coffee } from "@lucide/vue";
 import Button from "../components/ui/Button.vue";
 import Loader from "../components/ui/Loader.vue";
 
@@ -18,14 +18,6 @@ const loadJava = async () => {
     await new Promise((r) => setTimeout(r, 600));
     javaVersions.value = await invoke<string[]>("get_installed_java");
     isLoading.value = false;
-};
-
-const openJavaFolder = async () => {
-    try {
-        await invoke("open_java_folder");
-    } catch (e) {
-        console.error("Error opening java folder:", e);
-    }
 };
 
 onMounted(() => {
@@ -48,13 +40,6 @@ onMounted(() => {
                 </p>
             </section>
             <section class="flex flex-row items-center gap-2">
-                <Button
-                    :tooltip="'Open Java folder'"
-                    :tooltip-position="'bottom'"
-                    @click="openJavaFolder"
-                >
-                    <FolderOpen :size="20" />
-                </Button>
                 <Button
                     ref="installBtnEl"
                     :tooltip="'Install a new Java runtime'"
@@ -79,7 +64,7 @@ onMounted(() => {
         </header>
 
         <div
-            class="w-full h-full bg-[#161616] rounded-xl p-6 overflow-y-auto min-h-0"
+            class="min-h-0 h-full w-full overflow-y-auto rounded-[28px] border-2 border-[#26382d] bg-[#121412]/95 p-6 shadow-[0_8px_0_#060806,inset_0_1px_0_rgba(255,255,255,0.04)]"
             :class="
                 isLoading || javaVersions.length === 0
                     ? 'flex items-center justify-center'

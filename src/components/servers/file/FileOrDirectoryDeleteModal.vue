@@ -54,11 +54,11 @@ function close() {
     <div class="flex flex-col gap-5 p-5 w-72">
       <!-- Header -->
       <div class="flex items-center gap-2.5">
-        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/20 bg-red-500/10">
           <Trash2 :size="14" class="text-red-400" />
         </div>
         <div>
-          <p class="text-white text-sm font-semibold leading-none">Delete</p>
+          <p class="text-sm font-black leading-none text-white">Delete</p>
           <p class="text-white/40 text-xs mt-1 truncate max-w-[180px]">"{{ file?.name }}"</p>
         </div>
       </div>
@@ -74,14 +74,13 @@ function close() {
       <!-- Actions -->
       <div class="flex justify-end gap-2">
         <button
-          class="text-sm text-white/40 hover:text-white/70 px-3 py-1.5 rounded-lg transition-colors duration-150"
+          class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-bold text-white/40 transition-colors duration-150 hover:bg-white/10 hover:text-white/70"
           @click="close"
         >
           Cancel
         </button>
         <button
-          class="text-sm font-semibold text-white bg-red-600 hover:bg-red-500
-                 px-4 py-1.5 rounded-lg transition-colors duration-150"
+          class="rounded-xl border-2 border-red-400/60 bg-red-600 px-4 py-1.5 text-sm font-black text-white shadow-[0_3px_0_#060806] transition-all duration-150 hover:bg-red-500 active:translate-y-0.5 active:shadow-[0_1px_0_#060806]"
           @click="confirm"
         >
           Delete

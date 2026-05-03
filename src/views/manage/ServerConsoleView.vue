@@ -122,15 +122,15 @@ const sendCommand = async () => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-2 w-full h-full">
-        <section class="flex flex-row p-4 border-b border-white/10 gap-2">
+    <div class="flex h-full w-full flex-col gap-2 overflow-hidden">
+        <section class="flex shrink-0 flex-row gap-2 border-b border-[#26382d] bg-[#151815]/70 p-4">
             <Button
                 @click="startServer"
                 :disabled="isActive || isStopping || isRestarting"
                 :tooltip="'Start server'"
                 :tooltip-position="'bottom'"
                 :class="[
-                    'bg-transparent dark:bg-green-500/10 hover:bg-green-500/10 dark:hover:bg-green-500/10 transition-all',
+                    'border border-green-400/15 bg-green-500/10 hover:bg-green-500/15 transition-all',
                     isActive || isStopping || isRestarting
                         ? 'opacity-50 cursor-not-allowed'
                         : '',
@@ -144,7 +144,7 @@ const sendCommand = async () => {
                 :tooltip="'Stop server'"
                 :tooltip-position="'bottom'"
                 :class="[
-                    'bg-transparent dark:bg-red-500/10 hover:bg-red-500/10 dark:hover:bg-red-500/10 transition-all',
+                    'border border-red-400/15 bg-red-500/10 hover:bg-red-500/15 transition-all',
                     !isActive || isStopping || isRestarting
                         ? 'opacity-50 cursor-not-allowed'
                         : '',
@@ -158,7 +158,7 @@ const sendCommand = async () => {
                 :tooltip="'Restart server'"
                 :tooltip-position="'bottom'"
                 :class="[
-                    'bg-transparent dark:bg-yellow-500/10 hover:bg-yellow-500/10 dark:hover:bg-yellow-500/10 transition-all',
+                    'border border-yellow-400/15 bg-yellow-500/10 hover:bg-yellow-500/15 transition-all',
                     !isActive || isStopping || isRestarting
                         ? 'opacity-50 cursor-not-allowed'
                         : '',
@@ -178,7 +178,7 @@ const sendCommand = async () => {
                 "
                 :tooltip="'Network Tunnel (Playit)'"
                 :tooltip-position="'bottom'"
-                class="bg-transparent dark:bg-blue-500/10 hover:bg-blue-500/10 transition-all"
+                class="border border-blue-400/15 bg-blue-500/10 hover:bg-blue-500/15 transition-all"
                 layout-id="tunnel-modal"
             >
                 <GlobeIcon :class="'text-blue-500'" :size="16" />
@@ -194,11 +194,11 @@ const sendCommand = async () => {
         />
 
         <section
-            class="flex flex-col gap-4 w-full h-full p-4 overflow-hidden scroll-smooth"
+            class="flex h-full w-full flex-col gap-4 overflow-hidden p-4 scroll-smooth"
         >
             <div
                 ref="logsContainerRef"
-                class="flex-1 bg-[#0d0d0d] border border-white/5 rounded-xl p-6 overflow-y-auto flex flex-col gap-1.5 font-mono text-xs text-white/70 custom-scrollbar"
+                class="custom-scrollbar flex flex-1 flex-col gap-1.5 overflow-y-auto rounded-[24px] border-2 border-[#223127] bg-[#0c0f0d] p-6 font-mono text-xs text-white/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02),0_6px_0_#060806]"
             >
                 <div
                     v-if="serverLogs.length === 0"
@@ -223,7 +223,7 @@ const sendCommand = async () => {
 
             <div class="relative group">
                 <div
-                    class="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 font-mono text-sm group-focus-within:text-brand/40 transition-colors"
+                    class="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-white/20 transition-colors group-focus-within:text-brand/60"
                 >
                     <ChevronRight :size="16" />
                 </div>
@@ -232,7 +232,7 @@ const sendCommand = async () => {
                     placeholder="Type a command..."
                     v-model="commandInput"
                     @keyup.enter="sendCommand"
-                    class="w-full bg-[#0d0d0d] border border-white/5 rounded-xl py-4 pl-10 pr-4 font-mono text-white/90 text-sm outline-none focus:border-white/10 focus:ring-1 focus:ring-white/5 transition-all disabled:opacity-50"
+                    class="w-full rounded-[20px] border-2 border-[#223127] bg-[#0c0f0d] py-4 pl-10 pr-4 font-mono text-sm text-white/90 outline-none shadow-[0_5px_0_#060806] transition-all focus:border-brand/35 focus:ring-4 focus:ring-brand/10 disabled:opacity-50"
                 />
             </div>
         </section>

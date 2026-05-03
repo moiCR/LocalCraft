@@ -1,4 +1,4 @@
-<script setup lang = "ts">
+<script setup lang="ts">
 import type { Component } from 'vue';
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -16,9 +16,9 @@ const router = useRouter();
 const itemRef = ref<HTMLElement | null>(null);
 const titleRef = ref<HTMLElement | null>(null);
 
-const navigateTo = () =>{
-    router.push({name : props.to})
-}
+const navigateTo = () => {
+    router.push({ name: props.to });
+};
 
 const emitActiveItem = () => {
     if (!itemRef.value) return;
@@ -79,29 +79,29 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div
+    <button
         ref="itemRef"
-        class="group flex flex-row gap-2 items-center p-3 cursor-pointer rounded-3xl transition-all duration-300" 
+        type="button"
+        :title="props.title"
+        class="group flex h-11 items-center justify-center gap-2 rounded-[18px] px-3 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         :class="{
-            'text-green-300' : props.active,
-            'text-white' : !props.active
+            'min-w-32 font-black text-black': props.active,
+            'w-11 font-bold text-white/72 hover:text-brand': !props.active
         }"
         @click="navigateTo"
     >
-
         <component 
             :is="props.icon"
-            :size = "22"
-            class="transition-colors duration-300"
-            :class="props.active ? 'text-green-300' : 'text-white group-hover:text-green-300' "
+            :size="22"
+            class="shrink-0 transition-colors duration-300"
         />
 
         <span
             v-if="props.active"
             ref="titleRef"
-            class="text-sm font-bold whitespace-nowrap"
+            class="whitespace-nowrap text-sm"
         >
             {{ props.title }}
         </span>
-    </div>
+    </button>
 </template>

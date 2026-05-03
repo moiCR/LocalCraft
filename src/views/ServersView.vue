@@ -58,7 +58,7 @@ onMounted(() => {
         </header>
 
         <div 
-            class="w-full h-full bg-[#161616] rounded-xl p-6 overflow-y-auto min-h-0" 
+            class="min-h-0 h-full w-full overflow-y-auto rounded-[28px] border-2 border-[#26382d] bg-[#121412]/95 p-6 shadow-[0_8px_0_#060806,inset_0_1px_0_rgba(255,255,255,0.04)]" 
             :class="(isLoading || servers.length === 0) ? 'flex items-center justify-center' : 'flex flex-col gap-3 content-start'"
         >
             <Loader v-if="isLoading" />

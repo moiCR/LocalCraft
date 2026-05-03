@@ -10,10 +10,10 @@ const route = useRoute();
 </script>
 
 <template>
-    <div class="flex flex-col h-screen w-full bg-[#101010] text-white">
+    <div class="app-shell flex h-screen w-full flex-col text-white">
         <Titlebar />
         <main
-            class="flex-1 min-h-0 overflow-y-auto items-center justify-center px-52 pt-12 pb-10 w-full overflow-x-hidden"
+            class="flex-1 min-h-0 overflow-y-auto items-center justify-center px-52 pt-12 pb-28 w-full overflow-x-hidden"
         >
             <RouterView />
         </main>

@@ -52,7 +52,7 @@ onMounted(async () => {
         <section class="flex flex-row gap-4 items-center">
             <RouterLink
                 :to="{ name: 'servers' }"
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-300"
+                class="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-300"
             >
                 <ChevronLeft :size="24" />
             </RouterLink>
@@ -81,9 +81,9 @@ onMounted(async () => {
         <section class="flex flex-row justify-between items-center">
             <div class="flex flex-col">
                 <section class="flex flex-row items-center gap-2">
-                    <h1 class="text-4xl font-bold">{{ server?.name }}</h1>
+                    <h1 class="text-4xl font-black text-white">{{ server?.name }}</h1>
                     <span
-                        class="px-2 py-0.5 text-sm font-bold bg-white/5 text-white/40 rounded uppercase tracking-wider"
+                        class="px-2 py-0.5 text-sm font-bold bg-white/5 text-white/45 rounded uppercase tracking-wider"
                         >{{ server?.software }} {{ server?.version }}</span
                     >
                 </section>
@@ -98,7 +98,7 @@ onMounted(async () => {
                     :layout-id="`delete-server-${server?.id}`"
                     :tooltip="'Delete server'"
                     :tooltip-position="'bottom'"
-                    :class="'bg-transparent dark:bg-red-500/10 hover:bg-red-500/10 dark:hover:bg-red-500/10'"
+                    :class="'border border-red-400/15 bg-red-500/10 hover:bg-red-500/15'"
                     @click="openDeleteModal"
                 >
                     <TrashIcon :size="24" :class="'text-red-500'" />
@@ -108,7 +108,7 @@ onMounted(async () => {
                     :layout-id="`settings-server-${server?.id}`"
                     :tooltip="'Settings'"
                     :tooltip-position="'bottom'"
-                    :class="'bg-transparent dark:bg-amber-400/10 hover:bg-amber-400/10 dark:hover:bg-amber-400/10'"
+                    :class="'border border-amber-400/15 bg-amber-400/10 hover:bg-amber-400/15'"
                     @click="isSettingsModalOpen = true"
                 >
                     <Settings :size="24" :class="'text-amber-400'" />
@@ -117,7 +117,7 @@ onMounted(async () => {
         </section>
 
         <div
-            class="w-full h-full bg-[#161616] rounded-xl overflow-y-auto min-h-0 flex flex-col gap-3 content-start"
+            class="min-h-0 flex h-full w-full content-start flex-col gap-3 overflow-y-auto rounded-[28px] border-2 border-[#26382d] bg-[#121412]/95 shadow-[0_8px_0_#060806,inset_0_1px_0_rgba(255,255,255,0.04)]"
         >
             <RouterView />
         </div>

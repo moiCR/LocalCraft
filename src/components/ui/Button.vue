@@ -36,7 +36,7 @@ export default {
             :class="[
                 'relative z-10 cursor-pointer font-bold px-4 py-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
                 !($attrs.class as string)?.includes('bg-')
-                    ? 'text-black bg-white'
+                    ? 'text-white/80 bg-white/5 hover:bg-white/10'
                     : '',
                 props.disabled
                     ? 'opacity-50 cursor-not-allowed'
@@ -59,7 +59,7 @@ export default {
             <div
                 v-if="props.tooltip && hovered"
                 :class="[
-                    'absolute pointer-events-none z-100 whitespace-nowrap rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-medium text-black shadow-lg',
+                    'absolute pointer-events-none z-100 whitespace-nowrap rounded-lg border border-white/10 bg-[#1b1b1b] px-3 py-1.5 text-xs font-medium text-white/80 shadow-lg',
                     props.tooltipPosition === 'top'
                         ? 'bottom-full left-1/2 -translate-x-1/2 mb-2'
                         : '',

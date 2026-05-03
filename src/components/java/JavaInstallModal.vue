@@ -104,7 +104,7 @@ const handleInstall = async () => {
         @close="handleClose"
     >
         <div class="flex flex-col p-6 gap-6">
-            <h3 class="text-base font-bold text-white tracking-tight">
+            <h3 class="text-base font-black text-white tracking-tight">
                 {{ isInstalling ? 'Installing Java' : 'Install Java' }}
             </h3>
 
@@ -124,7 +124,7 @@ const handleInstall = async () => {
                     <button
                         type="button"
                         @click="handleClose"
-                        class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                        class="flex-1 cursor-pointer rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white/45 transition-colors hover:bg-white/10 hover:text-white"
                     >
                         Cancel
                     </button>
@@ -132,7 +132,7 @@ const handleInstall = async () => {
                         type="button"
                         :disabled="isLoading || !selectedVersion"
                         @click="handleInstall"
-                        class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-white text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        class="flex-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-amber-300/70 bg-amber-300 px-4 py-2.5 text-sm font-black text-black shadow-[0_4px_0_#060806] transition-all hover:bg-amber-200 active:translate-y-0.5 active:shadow-[0_1px_0_#060806] disabled:cursor-not-allowed disabled:opacity-30"
                     >
                         <Loader2 v-if="isLoading" :size="12" class="animate-spin" />
                         <Download v-else :size="12" />
@@ -146,8 +146,8 @@ const handleInstall = async () => {
                 <div class="flex flex-col items-center justify-center py-6 gap-6">
                     <div class="relative flex items-center justify-center">
                         <div class="absolute inset-0 bg-white/5 rounded-full scale-150 animate-pulse"></div>
-                        <div class="relative p-4 bg-white/5 rounded-2xl">
-                            <Coffee :size="32" class="text-white opacity-40" />
+                        <div class="relative rounded-[20px] border border-amber-300/20 bg-amber-300/10 p-4">
+                            <Coffee :size="32" class="text-amber-300 opacity-80" />
                         </div>
                     </div>
 
@@ -159,7 +159,7 @@ const handleInstall = async () => {
                             </div>
                             <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
                                 <div
-                                    class="bg-white h-full transition-all duration-500 ease-out"
+                                    class="h-full bg-amber-300 transition-all duration-500 ease-out"
                                     :style="{ width: `${progressPct}%` }"
                                 ></div>
                             </div>
@@ -173,7 +173,7 @@ const handleInstall = async () => {
                 <div v-if="error" class="mt-4 pt-2 border-t border-white/5">
                     <button
                         @click="isInstalling = false"
-                        class="w-full text-xs font-bold py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+                        class="w-full rounded-xl bg-white/10 py-2 text-xs font-bold transition-all hover:bg-white/20"
                     >
                         Try Again
                     </button>

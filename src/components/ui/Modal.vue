@@ -280,7 +280,7 @@ export default {
                 v-bind="$attrs"
                 :style="positionStyle"
                 :class="[
-                    'absolute z-50 bg-[#111111] shadow-2xl overflow-hidden',
+                    'absolute z-50 overflow-hidden border-2 border-[#26382d] bg-[#121412] shadow-[0_10px_0_#060806,0_22px_44px_rgba(0,0,0,0.45)]',
                     !isAnchored
                         ? 'w-full md:min-w-[320px] md:w-auto rounded-[20px]'
                         : 'w-full md:min-w-48 md:w-auto rounded-xl',

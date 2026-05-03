@@ -170,13 +170,13 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="flex flex-col w-full h-full overflow-hidden">
+    <div class="flex h-full w-full flex-col overflow-hidden">
         <section
-            class="flex flex-row px-4 py-3 border-b border-white/10 gap-2 items-center shrink-0 justify-between"
+            class="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-[#26382d] bg-[#151815]/70 px-4 py-3"
         >
             <div class="flex min-w-0 flex-1 items-center gap-2">
                 <div
-                    class="group flex h-11 w-full max-w-md items-center overflow-hidden rounded-2xl border border-white/10 bg-[#101010] text-white/80 transition-all focus-within:border-green-400/40 focus-within:ring-1 focus-within:ring-green-400/15"
+                    class="group flex h-11 w-full max-w-md items-center overflow-hidden rounded-2xl border-2 border-[#223127] bg-[#0c0f0d] text-white/80 shadow-[0_4px_0_#060806] transition-all focus-within:border-brand/40 focus-within:ring-4 focus-within:ring-brand/10"
                 >
                     <div
                         class="flex h-full w-12 shrink-0 items-center justify-center border-r border-white/10 bg-white/[0.03] text-white/35 transition-colors group-focus-within:text-green-300"
@@ -194,11 +194,11 @@ onMounted(async () => {
                 <button
                     type="button"
                     :title="`Filter: ${installedFilterLabel}`"
-                    class="flex h-11 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium shadow-sm transition-all focus:outline-none focus:ring-1 focus:ring-white/20"
+                    class="flex h-11 shrink-0 items-center gap-2 rounded-2xl border px-3 text-sm font-bold shadow-[0_4px_0_#060806] transition-all focus:outline-none focus:ring-4 focus:ring-brand/10 active:translate-y-0.5 active:shadow-[0_1px_0_#060806]"
                     :class="
                         installedFilter === 'installed'
-                            ? 'border-green-400/30 bg-green-400/10 text-green-300 hover:bg-green-400/15'
-                            : 'border-white/5 bg-white/2 text-white/70 hover:bg-white/5 hover:text-white'
+                            ? 'border-brand/35 bg-brand/10 text-brand hover:bg-brand/15'
+                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
                     "
                     @click="toggleInstalledFilter"
                 >
@@ -210,7 +210,7 @@ onMounted(async () => {
                 <button
                     type="button"
                     title="Refresh mods"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-white/70 shadow-sm transition-all hover:bg-white/5 hover:text-white focus:outline-none focus:ring-1 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/70 shadow-[0_4px_0_#060806] transition-all hover:bg-white/10 hover:text-white active:translate-y-0.5 active:shadow-[0_1px_0_#060806] focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="isRefreshing"
                     @click="resetAndRefreshMods"
                 >
@@ -247,17 +247,17 @@ onMounted(async () => {
                 <article
                     v-for="mod in displayedMods"
                     :key="`${mod.provider}-${mod.id}`"
-                    class="flex min-h-32 gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-left transition-colors hover:border-white/10 hover:bg-white/[0.04]"
+                    class="flex min-h-32 gap-3 rounded-[22px] border-2 border-[#223127] bg-[#0c0f0d] p-3 text-left shadow-[0_5px_0_#060806] transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:bg-[#101611]"
                 >
                     <img
                         v-if="mod.icon_url"
                         :src="mod.icon_url"
                         :alt="`${mod.title} icon`"
-                        class="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                class="h-12 w-12 shrink-0 rounded-2xl border border-white/10 object-cover"
                     />
                     <div
                         v-else
-                        class="h-12 w-12 shrink-0 rounded-lg bg-white/5"
+                            class="h-12 w-12 shrink-0 rounded-2xl border border-white/10 bg-white/5"
                     />
                     <div class="min-w-0 flex-1">
                         <div class="flex min-w-0 items-start justify-between gap-2">
@@ -290,7 +290,7 @@ onMounted(async () => {
                             </p>
                             <button
                                 type="button"
-                                class="flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-bold transition-colors disabled:cursor-not-allowed"
+                                class="flex h-8 shrink-0 items-center gap-1.5 rounded-xl border px-2 text-xs font-black transition-colors disabled:cursor-not-allowed"
                                 :class="
                                     installedIds.has(modKey(mod))
                                         ? 'border-green-400/20 bg-green-400/10 text-green-300'
@@ -318,7 +318,7 @@ onMounted(async () => {
             </div>
         </section>
         <section
-            class="flex h-14 shrink-0 items-center justify-between border-t border-white/10 px-4 text-sm text-white/40"
+            class="flex h-14 shrink-0 items-center justify-between border-t border-[#26382d] bg-[#151815]/70 px-4 text-sm text-white/40"
         >
             <p>
                 <span v-if="totalMods > 0">
@@ -330,7 +330,7 @@ onMounted(async () => {
                 <button
                     type="button"
                     title="Previous page"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     :disabled="!canGoPrevious"
                     @click="goToPreviousPage"
                 >
@@ -342,7 +342,7 @@ onMounted(async () => {
                 <button
                     type="button"
                     title="Next page"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/2 text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     :disabled="!canGoNext"
                     @click="goToNextPage"
                 >

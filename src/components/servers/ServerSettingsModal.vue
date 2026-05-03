@@ -131,7 +131,7 @@ const handleSave = async () => {
         <div class="flex flex-col p-6 gap-5 w-full min-w-[320px]">
             <!-- Header -->
             <h3
-                class="text-base font-bold text-white tracking-tight"
+                class="text-base font-black text-white tracking-tight"
             >
                 Server Settings
             </h3>
@@ -165,7 +165,7 @@ const handleSave = async () => {
                         v-model="name"
                         type="text"
                         placeholder="My Awesome Server"
-                        class="border border-white/5 bg-white/2 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-gray-400"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white transition-all placeholder:text-gray-500 focus:border-brand/50 focus:outline-none focus:ring-4 focus:ring-brand/10"
                     />
                 </div>
 
@@ -197,7 +197,7 @@ const handleSave = async () => {
                     type="button"
                     :disabled="isSaving"
                     @click="handleClose"
-                    class="flex-1 text-sm font-medium py-2.5 px-4 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
+                    class="flex-1 cursor-pointer rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white/45 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
                 >
                     Cancel
                 </button>
@@ -205,7 +205,7 @@ const handleSave = async () => {
                     type="button"
                     :disabled="isSaving || !name.trim() || !javaVersion"
                     @click="handleSave"
-                    class="flex-1 flex items-center justify-center gap-2 text-sm font-bold py-2.5 px-4 rounded-lg bg-white text-black hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    class="flex-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-brand/70 bg-brand px-4 py-2.5 text-sm font-black text-black shadow-[0_4px_0_#060806] transition-all hover:bg-brand/90 active:translate-y-0.5 active:shadow-[0_1px_0_#060806] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                     <Loader2 v-if="isSaving" :size="12" class="animate-spin" />
                     <Save v-else :size="12" />

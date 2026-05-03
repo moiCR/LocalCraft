@@ -54,7 +54,7 @@ const handleDelete = async () => {
             <div class="flex flex-col gap-2 mt-2">
                 <div class="flex items-center gap-3 text-red-500">
                     <AlertTriangle :size="16" />
-                    <h1 class="text-lg font-bold tracking-tight">Delete server</h1>
+                    <h1 class="text-lg font-black tracking-tight">Delete server</h1>
                 </div>
                 <p class="text-white/60 leading-relaxed">
                     Are you sure you want to delete <span class="text-white font-bold underline decoration-red-500/50">{{ server.name }}</span>? 
@@ -66,14 +66,14 @@ const handleDelete = async () => {
                 <Button 
                     @click="onClose" 
                     :disabled="isDeleting"
-                    class="bg-transparent hover:bg-white/5 border border-white/10 text-sm"
+                    class="border border-white/10 bg-white/5 text-sm hover:bg-white/10"
                 >
                     Cancel
                 </Button>
                 <Button 
                     @click="handleDelete" 
                     :disabled="isDeleting"
-                    class="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
+                    class="flex items-center justify-center gap-2 border-2 border-red-400/60 bg-red-500 text-white shadow-[0_4px_0_#060806] hover:bg-red-600 active:translate-y-0.5 active:shadow-[0_1px_0_#060806]"
                 >
                     <RefreshCcw v-if="isDeleting" :size="16" class="animate-spin" />
                     <span class="text-sm">{{ isDeleting ? 'Deleting...' : 'Delete Server' }}</span>
