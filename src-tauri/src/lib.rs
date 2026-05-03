@@ -1,5 +1,6 @@
 mod file;
 mod java;
+mod mods;
 mod server;
 mod software;
 
@@ -14,6 +15,7 @@ use file::file_manager::{
     write_file,
 };
 use java::java_manager::{delete_java, install_java_cmd};
+use mods::mods_manager::{get_installed_mods, install_mod, search_mods};
 use server::server_manager::{
     create_server, delete_server, get_server, get_servers, is_server_running, load_servers,
     open_folder, send_command, start_server, update_server, ServerManager,
@@ -200,7 +202,10 @@ pub fn run() {
             download_playit_command,
             start_tunnel,
             stop_tunnel,
-            get_tunnel_status
+            get_tunnel_status,
+            search_mods,
+            install_mod,
+            get_installed_mods
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

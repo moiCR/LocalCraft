@@ -6,7 +6,7 @@
     <strong>A high-performance, modern Minecraft server manager built with Tauri and Vue.</strong>
   </p>
 
-  [![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/your-username/localcraft-vuew)
+  [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/your-username/localcraft-vuew)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#)
 </div>
@@ -42,10 +42,9 @@ This is our roadmap to reach version 1.0.
 - [ ] **File Manager**:
   - [x] Integrated file explorer.
   - [x] Text editor for `.properties`, `.yml`, `.json` files.
-- [ ] **Mods/Plugins Section**:
-  - [ ] Integration with the **Modrinth** API.
-  - [ ] Integration with the **CurseForge** API.
-  - [ ] One-click installation.
+- [X] **Mods/Plugins Section**:
+  - [X] Integration with the **Modrinth** API.
+  - [X] One-click installation.
 
 ## 🛠️ Tech Stack
 

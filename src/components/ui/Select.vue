@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onUnmounted, nextTick, type Component } from 'vue';
 import { ChevronDown, Check } from '@lucide/vue';
 
 export interface SelectOption {
     label: string | number;
     value: string;
+    icon?: string;
+    iconAlt?: string;
+    iconComponent?: Component;
 }
 
 const props = defineProps<{
@@ -14,6 +17,7 @@ const props = defineProps<{
     placeholder?: string;
     class?: string | object | Array<any>;
     disabled?: boolean;
+    iconOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +47,7 @@ const updatePosition = () => {
 
     dropdownPos.value = {
         left: rect.left,
-        width: rect.width,
+        width: props.iconOnly ? Math.max(rect.width, 180) : rect.width,
         openAbove,
         ...(openAbove 
             ? { bottom: window.innerHeight - rect.top + 6 }
@@ -99,6 +103,7 @@ onUnmounted(() => {
         <div
             ref="triggerRef"
             @click="handleToggle"
+            :title="selectedOption ? String(selectedOption.label) : placeholder || 'Select an option'"
             :class="[
                 'flex items-center justify-between px-3 py-2 rounded-lg border transition-all shadow-sm',
                 disabled 
@@ -107,10 +112,39 @@ onUnmounted(() => {
                 isOpen && !disabled ? 'ring-1 ring-white/20' : ''
             ]"
         >
-            <span :class="['truncate text-sm', !selectedOption && 'text-gray-500']">
-                {{ selectedOption ? selectedOption.label : placeholder || 'Select an option' }}
+            <span
+                :class="[
+                    'flex min-w-0 items-center gap-2 text-sm',
+                    !selectedOption && 'text-gray-500'
+                ]"
+            >
+                <span
+                    v-if="selectedOption?.icon || selectedOption?.iconComponent"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+                >
+                    <img
+                        v-if="selectedOption.icon"
+                        :src="selectedOption.icon"
+                        :alt="selectedOption.iconAlt || `${selectedOption.label} logo`"
+                        class="max-h-5 max-w-5"
+                    />
+                    <component
+                        :is="selectedOption.iconComponent"
+                        v-else
+                        class="h-5 w-5"
+                    />
+                </span>
+                <span
+                    class="truncate"
+                    :class="iconOnly && (selectedOption?.icon || selectedOption?.iconComponent) ? 'sr-only' : ''"
+                >
+                    {{ selectedOption ? selectedOption.label : placeholder || 'Select an option' }}
+                </span>
             </span>
-            <div :class="['transition-transform duration-200', isOpen ? 'rotate-180' : '']">
+            <div
+                v-if="!iconOnly"
+                :class="['transition-transform duration-200', isOpen ? 'rotate-180' : '']"
+            >
                 <ChevronDown class="w-4 h-4 text-gray-400" />
             </div>
         </div>
@@ -149,7 +183,25 @@ onUnmounted(() => {
                                     : 'text-gray-300'
                             ]"
                         >
-                            {{ option.label }}
+                            <span class="flex min-w-0 items-center gap-3">
+                                <span
+                                    v-if="option.icon || option.iconComponent"
+                                    class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden [&>svg]:block [&>svg]:max-h-6 [&>svg]:max-w-6"
+                                >
+                                    <img
+                                        v-if="option.icon"
+                                        :src="option.icon"
+                                        :alt="option.iconAlt || `${option.label} logo`"
+                                        class="max-h-6 max-w-6"
+                                    />
+                                    <component
+                                        :is="option.iconComponent"
+                                        v-else
+                                        class="h-6 w-6"
+                                    />
+                                </span>
+                                <span class="truncate">{{ option.label }}</span>
+                            </span>
                             <Check v-if="modelValue === option.value" class="w-4 h-4" />
                         </div>
                     </div>

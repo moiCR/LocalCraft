@@ -3,7 +3,7 @@ use std::fs;
 use serde::Serialize;
 use tauri::State;
 
-use crate::server::server_manager::ServerManager;
+use crate::{mods::mods_manager::remove_installed_mod_record_by_filename, server::server_manager::ServerManager};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FileInfo {
@@ -113,8 +113,10 @@ pub fn delete_file(
             .cloned()
             .ok_or("Server no encontrado")?
     };
-    let full_path = server.get_path()?.join(&path);
+    let base = server.get_path()?;
+    let full_path = base.join(&path);
     fs::remove_file(&full_path).map_err(|e| e.to_string())?;
+    sync_deleted_mod_metadata(&base, &path)?;
     Ok(())
 }
 
@@ -149,8 +151,10 @@ pub fn delete_dir(
             .cloned()
             .ok_or("Server no encontrado")?
     };
-    let full_path = server.get_path()?.join(&path);
+    let base = server.get_path()?;
+    let full_path = base.join(&path);
     fs::remove_dir_all(&full_path).map_err(|e| e.to_string())?;
+    sync_deleted_mod_directory_metadata(&base, &path)?;
     Ok(())
 }
 
@@ -191,5 +195,39 @@ pub fn save_file_binary(
     };
     let full_path = server.get_path()?.join(&path);
     fs::write(&full_path, data).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn sync_deleted_mod_metadata(base: &std::path::Path, path: &str) -> Result<(), String> {
+    let relative_path = std::path::Path::new(path);
+    let mut components = relative_path.components();
+
+    if components.next().and_then(|component| component.as_os_str().to_str()) != Some("mods") {
+        return Ok(());
+    }
+
+    let filename = match components.next().and_then(|component| component.as_os_str().to_str()) {
+        Some(filename) => filename,
+        None => return Ok(()),
+    };
+
+    if components.next().is_some() {
+        return Ok(());
+    }
+
+    remove_installed_mod_record_by_filename(&base.join("mods"), filename)
+}
+
+fn sync_deleted_mod_directory_metadata(base: &std::path::Path, path: &str) -> Result<(), String> {
+    if path != "mods" {
+        return Ok(());
+    }
+
+    let metadata_path = base.join("mods").join(".localcraft-mods.json");
+    if metadata_path.exists() {
+        std::fs::remove_file(metadata_path)
+            .map_err(|e| format!("Failed to remove installed mods metadata: {}", e))?;
+    }
+
     Ok(())
 }
