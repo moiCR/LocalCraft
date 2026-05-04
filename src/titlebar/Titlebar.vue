@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { AlertCircle, CircleArrowDown, LoaderCircle, Minus, Square, X } from "@lucide/vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -12,7 +12,7 @@ const minimize = () => appWindow.minimize();
 const toggleMaximize = () => appWindow.toggleMaximize();
 const close = () => appWindow.close();
 const route = useRoute();
-const availableUpdate = ref<Update | null>(null);
+const availableUpdate = shallowRef<Update | null>(null);
 const updateStatus = ref<
     "idle" | "checking" | "available" | "downloading" | "unavailable" | "error"
 >("idle");
