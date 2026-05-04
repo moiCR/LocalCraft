@@ -17,10 +17,6 @@ const props = defineProps<{
     server: Server;
 }>();
 
-const emit = defineEmits<{
-    (e: "deleted"): void;
-}>();
-
 const router = useRouter();
 
 const isRunning = ref(false);
@@ -102,8 +98,6 @@ const onClick = (e: Event) => {
                     </div>
                 </div>
             </div>
-
-            <!-- Chevron -->
             <div
                 class="pr-2 opacity-0 transition-opacity group-hover/item:opacity-55"
             >
