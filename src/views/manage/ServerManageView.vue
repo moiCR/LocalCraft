@@ -10,6 +10,7 @@ import {
     File,
     Package,
     Settings,
+    ShieldCheck,
 } from "@lucide/vue";
 import ServerNavItem from "../../components/servers/ServerNavItem.vue";
 import ServerDeleteModal from "../../components/servers/ServerDeleteModal.vue";
@@ -69,6 +70,12 @@ onMounted(async () => {
                     :title="'Files'"
                     :icon="File"
                     :active="route.path.includes('files')"
+                />
+                <ServerNavItem
+                    :to="{ name: 'server-whitelist' }"
+                    :title="'Whitelist'"
+                    :icon="ShieldCheck"
+                    :active="route.path.includes('whitelist')"
                 />
                 <ServerNavItem
                     :to="{ name: 'server-mods' }"

@@ -38,6 +38,11 @@ const router = createRouter({
                             path: "mods",
                             name: "server-mods",
                             component: () => import("../views/manage/ServerModsView.vue")
+                        },
+                        {
+                            path: "whitelist",
+                            name: "server-whitelist",
+                            component: () => import("../views/manage/ServerWhitelistView.vue")
                         }
                     ]
                 },
