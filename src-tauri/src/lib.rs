@@ -148,7 +148,8 @@ pub fn run() {
                         if let Some(window) = app_handle.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
-                            let _ = app_handle.emit("navigate", id);
+                            let route = if id == "home" { "" } else { id };
+                            let _ = app_handle.emit("navigate", route);
                         }
                     }
                 })

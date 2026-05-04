@@ -1,6 +1,6 @@
 [package]
 name = "LocalCraft"
-version = "0.5.1"
+version = "0.5.2"
 description = "App for managing local minecraft servers"
 authors = ["moiCR"]
 edition = "2021"
