@@ -33,7 +33,7 @@ const checkActivity = async () => {
 
 onMounted(checkActivity);
 
-const onClick = (e: Event) => {
+const onClick = () => {
     router.push({ name: "server-console", params: { id: props.server.id } });
 };
 </script>
