@@ -59,7 +59,7 @@ export default {
             <div
                 v-if="props.tooltip && hovered"
                 :class="[
-                    'absolute pointer-events-none z-100 whitespace-nowrap rounded-lg border border-white/10 bg-[#1b1b1b] px-3 py-1.5 text-xs font-medium text-white/80 shadow-lg',
+                    'absolute pointer-events-none z-100 whitespace-nowrap rounded-lg border border-[#c7d6c8] bg-[#fbfdf8] px-3 py-1.5 text-xs font-bold text-[#253126] shadow-[0_4px_0_#b9c7b8,0_10px_22px_rgba(38,56,45,0.14)] dark:border-white/10 dark:bg-[#1b1b1b] dark:text-white/80 dark:shadow-lg',
                     props.tooltipPosition === 'top'
                         ? 'bottom-full left-1/2 -translate-x-1/2 mb-2'
                         : '',

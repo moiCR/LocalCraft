@@ -5,6 +5,7 @@ import { check } from "@tauri-apps/plugin-updater";
 import {
     AlertCircle,
     CheckCircle2,
+    Check,
     Download,
     LoaderCircle,
     Monitor,
@@ -152,13 +153,19 @@ onMounted(async () => {
                             v-for="option in themeOptions"
                             :key="option.value"
                             type="button"
-                            class="flex h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-[#d6e0d3] bg-white text-[#667466] shadow-[0_2px_0_#c1d0be] transition-[color,background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-[#00a65a]/40 hover:text-[#008c4a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 active:translate-y-0 active:shadow-[0_1px_0_#c1d0be] dark:border-white/8 dark:bg-white/5 dark:text-white/45 dark:shadow-none dark:hover:border-brand/35 dark:hover:text-brand"
+                            class="relative flex h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-[#d6e0d3] bg-white text-[#667466] shadow-[0_2px_0_#c1d0be] transition-[color,background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-[#00a65a]/40 hover:text-[#008c4a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 active:translate-y-0 active:shadow-[0_1px_0_#c1d0be] dark:border-white/8 dark:bg-white/5 dark:text-white/45 dark:shadow-none dark:hover:border-brand/35 dark:hover:text-brand"
                             :class="{
                                 'border-[#00a65a]/60 bg-[#dcf8e9] text-[#007d43] shadow-[0_2px_0_#9bc9aa] dark:border-brand/50 dark:bg-brand/10 dark:text-brand':
                                     themePreference === option.value,
                             }"
                             @click="selectTheme(option.value)"
                         >
+                            <span
+                                v-if="themePreference === option.value"
+                                class="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#00a65a] text-white shadow-[0_0_0_2px_#dcf8e9] dark:bg-brand dark:text-black dark:shadow-[0_0_0_2px_#17301f]"
+                            >
+                                <Check :size="11" :stroke-width="4" />
+                            </span>
                             <component :is="option.icon" :size="16" />
                             <span class="text-[11px] font-black">{{ option.label }}</span>
                         </button>
@@ -167,7 +174,6 @@ onMounted(async () => {
 
                 <section class="space-y-2">
                     <button
-                        v-if="updaterEnabled"
                         type="button"
                         class="group flex h-12 w-full items-center gap-3 rounded-[18px] px-3 text-left font-bold text-[#506050] transition-[color,background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-[#253126]/8 hover:text-[#008c4a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-white/72 dark:hover:bg-white/10 dark:hover:text-brand"
                         @click="openGithub"
@@ -179,6 +185,7 @@ onMounted(async () => {
                     </button>
 
                     <button
+                        v-if="updaterEnabled"
                         type="button"
                         class="group flex h-12 w-full items-center gap-3 rounded-[18px] px-3 text-left font-bold text-[#506050] transition-[color,background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-[#253126]/8 hover:text-[#008c4a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-white/72 dark:hover:bg-white/10 dark:hover:text-brand"
                         :class="{

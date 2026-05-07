@@ -8,6 +8,7 @@ const mediaQuery =
     typeof window !== "undefined"
         ? window.matchMedia("(prefers-color-scheme: dark)")
         : null;
+let themeAnimationTimeout: number | null = null;
 
 const readStoredTheme = (): ThemePreference => {
     if (typeof localStorage === "undefined") return "system";
@@ -33,10 +34,25 @@ export const applyTheme = () => {
 
     const resolvedTheme = resolveTheme(themePreference.value);
     const root = document.documentElement;
+    const previousTheme = root.dataset.resolvedTheme;
 
     root.classList.toggle("dark", resolvedTheme === "dark");
     root.dataset.theme = themePreference.value;
+    root.dataset.resolvedTheme = resolvedTheme;
     root.style.colorScheme = resolvedTheme;
+
+    if (previousTheme && previousTheme !== resolvedTheme) {
+        root.dataset.themeChanging = "true";
+
+        if (themeAnimationTimeout !== null) {
+            window.clearTimeout(themeAnimationTimeout);
+        }
+
+        themeAnimationTimeout = window.setTimeout(() => {
+            delete root.dataset.themeChanging;
+            themeAnimationTimeout = null;
+        }, 360);
+    }
 };
 
 export const setThemePreference = (preference: ThemePreference) => {
