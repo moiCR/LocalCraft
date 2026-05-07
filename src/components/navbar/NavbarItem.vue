@@ -34,14 +34,17 @@ const emitActiveItem = () => {
 
 const animateTitle = () => {
     if (!titleRef.value) return;
+    gsap.killTweensOf(titleRef.value);
     gsap.fromTo(
         titleRef.value,
         { opacity: 0, x: -6 },
         {
             opacity: 1,
             x: 0,
-            duration: 0.22,
+            duration: 0.16,
             ease: 'power2.out',
+            force3D: false,
+            overwrite: 'auto',
         },
     );
 };
@@ -51,7 +54,14 @@ onMounted(() => {
     gsap.fromTo(
         itemRef.value,
         { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' },
+        {
+            opacity: 1,
+            y: 0,
+            duration: 0.2,
+            ease: 'power2.out',
+            force3D: false,
+            overwrite: 'auto',
+        },
     );
 
     if (props.active) {
@@ -83,7 +93,7 @@ onUnmounted(() => {
         ref="itemRef"
         type="button"
         :title="props.title"
-        class="group flex h-11 items-center justify-center gap-2 rounded-[18px] px-3 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        class="group flex h-11 items-center justify-center gap-2 rounded-[18px] px-3 transition-[color,background-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         :class="{
             'min-w-32 font-black text-black': props.active,
             'w-11 font-bold text-white/72 hover:text-brand': !props.active
@@ -93,7 +103,7 @@ onUnmounted(() => {
         <component 
             :is="props.icon"
             :size="22"
-            class="shrink-0 transition-colors duration-300"
+            class="shrink-0 transition-colors duration-150"
         />
 
         <span

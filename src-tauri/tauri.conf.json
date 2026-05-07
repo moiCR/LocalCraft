@@ -21,7 +21,8 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": ["default", "desktop-capability"]
     }
   },
   "bundle": {
@@ -35,18 +36,6 @@
       "icons/icon.ico"
     ],
 
-    "createUpdaterArtifacts": true
-  },
-
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3RjQxQTc3MTREMjU1NDMKUldSRFZkSVVkeHIwbHp5cExQT1FDOC9YazRQVXZoajlLZUEwOU1NNkMxbTBNRndKUDA0UmxseVgK",
-      "endpoints": [
-        "https://github.com/moiCR/LocalCraft/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
+    "createUpdaterArtifacts": false
   }
 }

@@ -11,7 +11,6 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-start-dragging",
     "opener:default",
-    "process:allow-restart",
-    "updater:default"
+    "process:allow-restart"
   ]
 }

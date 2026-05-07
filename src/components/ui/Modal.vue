@@ -17,6 +17,45 @@ const emit = defineEmits<{
 const modalRef = ref<HTMLDivElement | null>(null);
 const positionStyle = ref<Record<string, string>>({});
 const isAnchored = computed(() => !!props.anchorEl);
+let hiddenOriginEl: HTMLElement | null = null;
+let prevOriginVisibility = "";
+
+const getPropOrigin = () => props.originEl ?? props.anchorEl ?? null;
+
+const getAnimationOrigin = () => {
+    const origin = getPropOrigin();
+    if (!origin || !props.layoutId) return origin;
+
+    const candidates = [
+        origin,
+        ...Array.from(origin.querySelectorAll<HTMLElement>("[layout-id]")),
+    ];
+
+    return (
+        candidates.find(
+            (candidate) =>
+                candidate.getAttribute("layout-id") === props.layoutId,
+        ) ?? origin
+    );
+};
+
+const hideAnimationOrigin = () => {
+    const origin = getAnimationOrigin();
+    if (!origin || hiddenOriginEl === origin) return;
+
+    restoreAnimationOrigin();
+    hiddenOriginEl = origin;
+    prevOriginVisibility = origin.style.visibility;
+    origin.style.visibility = "hidden";
+};
+
+const restoreAnimationOrigin = () => {
+    if (!hiddenOriginEl) return;
+
+    hiddenOriginEl.style.visibility = prevOriginVisibility;
+    hiddenOriginEl = null;
+    prevOriginVisibility = "";
+};
 
 const updatePosition = () => {
     if (!props.isOpen || !modalRef.value) return;
@@ -39,7 +78,7 @@ const updatePosition = () => {
         return;
     }
 
-    const anchorRect = props.anchorEl?.getBoundingClientRect();
+    const anchorRect = getAnimationOrigin()?.getBoundingClientRect();
 
     if (!anchorRect) {
         positionStyle.value = {
@@ -96,6 +135,17 @@ watch(
     () => props.anchorEl,
     () => {
         if (props.isOpen) {
+            hideAnimationOrigin();
+            nextTick(updatePosition);
+        }
+    },
+);
+
+watch(
+    () => props.originEl,
+    () => {
+        if (props.isOpen) {
+            hideAnimationOrigin();
             nextTick(updatePosition);
         }
     },
@@ -121,6 +171,7 @@ watch(
             if (scrollbarWidth > 0) {
                 document.body.style.paddingRight = `${scrollbarWidth}px`;
             }
+            hideAnimationOrigin();
         } else {
             window.removeEventListener("keydown", handleKeyDown);
             document.body.style.overflow = prevOverflow;
@@ -131,6 +182,9 @@ watch(
 
 onMounted(() => {
     window.addEventListener("resize", updatePosition);
+    if (props.isOpen) {
+        hideAnimationOrigin();
+    }
 });
 
 onUnmounted(() => {
@@ -138,6 +192,7 @@ onUnmounted(() => {
     window.removeEventListener("resize", updatePosition);
     document.body.style.overflow = prevOverflow;
     document.body.style.paddingRight = prevPaddingRight;
+    restoreAnimationOrigin();
 });
 
 const onEnter = async (el: Element, done: () => void) => {
@@ -146,7 +201,7 @@ const onEnter = async (el: Element, done: () => void) => {
     updatePosition();
     await nextTick();
 
-    const animOrigin = props.originEl ?? props.anchorEl;
+    const animOrigin = getAnimationOrigin();
     const anchorRect = animOrigin?.getBoundingClientRect();
 
     if (anchorRect && (props.layoutId || props.originEl)) {
@@ -170,7 +225,7 @@ const onEnter = async (el: Element, done: () => void) => {
                 y: deltaY,
                 scaleX: scaleX,
                 scaleY: scaleY,
-                opacity: 0,
+                opacity: 1,
                 transformOrigin: "center center",
             },
             {
@@ -206,7 +261,7 @@ const onEnter = async (el: Element, done: () => void) => {
 
 const onLeave = (el: Element, done: () => void) => {
     const target = el as HTMLElement;
-    const animOrigin = props.originEl ?? props.anchorEl;
+    const animOrigin = getAnimationOrigin();
     const anchorRect = animOrigin?.getBoundingClientRect();
 
     if (anchorRect && (props.layoutId || props.originEl)) {
@@ -228,11 +283,14 @@ const onLeave = (el: Element, done: () => void) => {
             y: deltaY,
             scaleX: scaleX,
             scaleY: scaleY,
-            opacity: 0,
+            opacity: 1,
             duration: 0.3,
             transformOrigin: "center center",
             ease: "power2.in",
-            onComplete: done,
+            onComplete: () => {
+                restoreAnimationOrigin();
+                done();
+            },
         });
     } else {
         gsap.to(target, {
@@ -240,7 +298,10 @@ const onLeave = (el: Element, done: () => void) => {
             opacity: 0,
             duration: 0.2,
             ease: "power2.in",
-            onComplete: done,
+            onComplete: () => {
+                restoreAnimationOrigin();
+                done();
+            },
         });
     }
 };
@@ -266,7 +327,7 @@ export default {
                 v-if="isOpen"
                 :class="[
                     'fixed inset-0 z-40',
-                    isAnchored ? 'bg-transparent' : 'bg-black/70',
+                    isAnchored ? 'bg-transparent' : 'bg-[#1d251d]/25 dark:bg-black/70',
                     $attrs.class,
                 ]"
                 @click="emit('close')"
@@ -280,7 +341,7 @@ export default {
                 v-bind="$attrs"
                 :style="positionStyle"
                 :class="[
-                    'absolute z-50 overflow-hidden border-2 border-[#26382d] bg-[#121412] shadow-[0_10px_0_#060806,0_22px_44px_rgba(0,0,0,0.45)]',
+                    'absolute z-50 overflow-hidden border-2 border-[#c7d6c8] bg-[#fbfdf8] shadow-[0_10px_0_#b9c7b8,0_22px_44px_rgba(38,56,45,0.18)] dark:border-[#26382d] dark:bg-[#121412] dark:shadow-[0_10px_0_#060806,0_22px_44px_rgba(0,0,0,0.45)]',
                     !isAnchored
                         ? 'w-full md:min-w-[320px] md:w-auto rounded-[20px]'
                         : 'w-full md:min-w-48 md:w-auto rounded-xl',

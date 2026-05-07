@@ -90,22 +90,26 @@ pub fn run() {
     let tunnel_manager = TunnelManager::new();
     ensure_app_dirs().unwrap();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .manage(server_manager)
         .manage(tunnel_manager)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_prevent_default::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
             }
-        }))
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        }));
+
+    #[cfg(feature = "updater")]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+
+    builder
         .setup(|app| {
-            let handle = app.handle();
+            let _handle = app.handle();
 
             let item_home = MenuItem::with_id(app, "home", "Home", true, None::<&str>)?;
             let item_servers = MenuItem::with_id(app, "servers", "Servers", true, None::<&str>)?;

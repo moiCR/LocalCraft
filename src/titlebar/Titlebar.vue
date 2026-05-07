@@ -7,6 +7,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useRoute } from "vue-router";
 
 const appWindow = getCurrentWindow();
+const updaterEnabled = import.meta.env.VITE_ENABLE_UPDATER === "true";
 
 const minimize = () => appWindow.minimize();
 const toggleMaximize = () => appWindow.toggleMaximize();
@@ -60,7 +61,8 @@ const updateProgress = computed(() => {
 });
 
 const showUpdater = computed(() =>
-    availableUpdate.value !== null || updateStatus.value === "downloading",
+    updaterEnabled &&
+    (availableUpdate.value !== null || updateStatus.value === "downloading"),
 );
 
 const updaterTooltip = computed(() => {
@@ -96,6 +98,7 @@ const scheduleStatusReset = () => {
 };
 
 const checkForUpdate = async (silent = false) => {
+    if (!updaterEnabled) return;
     if (updateStatus.value === "checking" || updateStatus.value === "downloading") return;
 
     clearStatusReset();
@@ -116,6 +119,7 @@ const checkForUpdate = async (silent = false) => {
 };
 
 const installUpdate = async () => {
+    if (!updaterEnabled) return;
     if (!availableUpdate.value || updateStatus.value === "downloading") return;
 
     clearStatusReset();
@@ -172,6 +176,7 @@ const handleUpdaterClick = () => {
 };
 
 onMounted(() => {
+    if (!updaterEnabled) return;
     void checkForUpdate(true);
 });
 

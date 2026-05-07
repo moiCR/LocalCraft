@@ -1,6 +1,9 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
+import { initTheme } from "./theme";
+
+initTheme();
 
 const app = createApp(App);
 

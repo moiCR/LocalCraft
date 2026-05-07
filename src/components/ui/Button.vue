@@ -34,13 +34,13 @@ export default {
             :disabled="props.disabled"
             v-bind="$attrs"
             :class="[
-                'relative z-10 cursor-pointer font-bold px-4 py-2 rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+                'relative z-10 cursor-pointer font-bold px-4 py-2 rounded-xl transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out',
                 !($attrs.class as string)?.includes('bg-')
                     ? 'text-white/80 bg-white/5 hover:bg-white/10'
                     : '',
                 props.disabled
                     ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:scale-x-105 hover:scale-y-[0.95]',
+                    : 'hover:-translate-y-0.5 active:translate-y-0',
                 $attrs.class,
             ]"
             style="border-radius: 12px"
@@ -49,12 +49,12 @@ export default {
         </button>
 
         <Transition
-            enter-active-class="transition ease-out duration-150"
-            enter-from-class="opacity-0 translate-y-1 scale-95"
-            enter-to-class="opacity-100 translate-y-0 scale-100"
-            leave-active-class="transition ease-in duration-100"
-            leave-from-class="opacity-100 translate-y-0 scale-100"
-            leave-to-class="opacity-0 translate-y-1 scale-95"
+            enter-active-class="transition-[opacity,transform] ease-out duration-100"
+            enter-from-class="opacity-0 translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition-[opacity,transform] ease-in duration-75"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-1"
         >
             <div
                 v-if="props.tooltip && hovered"
