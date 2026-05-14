@@ -3,27 +3,32 @@ import { listen } from "@tauri-apps/api/event";
 
 export interface LogPayload {
     id: string;
-    line: string;
+    lines: string[];
 }
+
+const MAX_LOG_LINES = 500;
 
 export const globalLogsCache = reactive<Record<string, string[]>>({});
 let isListening = false;
+
+const trimLogBuffer = (logs: string[]) => {
+    if (logs.length > MAX_LOG_LINES) {
+        logs.splice(0, logs.length - MAX_LOG_LINES);
+    }
+};
+
+const appendLogBatch = (id: string, lines: string[]) => {
+    const nextLogs = (globalLogsCache[id] || []).concat(lines);
+    trimLogBuffer(nextLogs);
+    globalLogsCache[id] = nextLogs;
+};
 
 export const startGlobalListener = async () => {
     if (isListening) return;
     isListening = true;
 
     await listen<LogPayload>('server-log', (event) => {
-        const { id, line } = event.payload;
-
-        if (!globalLogsCache[id]) {
-            globalLogsCache[id] = [];
-        }
-
-        globalLogsCache[id].push(line);
-
-        if (globalLogsCache[id].length > 500) {
-            globalLogsCache[id].shift();
-        }
+        const { id, lines } = event.payload;
+        appendLogBatch(id, lines);
     });
 };

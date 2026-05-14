@@ -1,5 +1,6 @@
-### What's New in v0.6.1
+### What's New in v0.6.2
 
 ### Fixes
 
-- Fixed Linux AppImage startup failures caused by EGL initialization on transparent windows.
+- Improved Linux performance when starting servers with heavy console output.
+- Added RPM package generation to release builds.

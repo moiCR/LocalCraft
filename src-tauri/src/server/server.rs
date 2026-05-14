@@ -5,6 +5,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
+use tokio::time::{interval, Duration};
 use uuid::Uuid;
 
 pub struct RunningServer {
@@ -28,7 +29,33 @@ pub struct Server {
 #[derive(Clone, Serialize)]
 struct LogPayload {
     id: String,
-    line: String,
+    lines: Vec<String>,
+}
+
+const LOG_FLUSH_INTERVAL: Duration = Duration::from_millis(200);
+const MAX_LOG_LINES: usize = 500;
+
+fn emit_log_batch(handle: &AppHandle, id: &str, lines: &mut Vec<String>) {
+    if lines.is_empty() {
+        return;
+    }
+
+    let _ = handle.emit(
+        "server-log",
+        LogPayload {
+            id: id.to_string(),
+            lines: std::mem::take(lines),
+        },
+    );
+}
+
+fn push_pending_log(lines: &mut Vec<String>, line: String) {
+    lines.push(line);
+
+    if lines.len() > MAX_LOG_LINES {
+        let overflow = lines.len() - MAX_LOG_LINES;
+        lines.drain(0..overflow);
+    }
 }
 
 impl Server {
@@ -191,15 +218,21 @@ impl Server {
         let running_clone = self.running.clone();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                let _ = handle_clone.emit(
-                    "server-log",
-                    LogPayload {
-                        id: id_clone.clone(),
-                        line,
+            let mut flush_interval = interval(LOG_FLUSH_INTERVAL);
+            let mut pending_lines = Vec::new();
+
+            loop {
+                tokio::select! {
+                    line = reader.next_line() => match line {
+                        Ok(Some(line)) => push_pending_log(&mut pending_lines, line),
+                        Ok(None) | Err(_) => break,
                     },
-                );
+                    _ = flush_interval.tick() => {
+                        emit_log_batch(&handle_clone, &id_clone, &mut pending_lines);
+                    },
+                }
             }
+            emit_log_batch(&handle_clone, &id_clone, &mut pending_lines);
 
             // Server stdout closed, which means it stopped.
             {
@@ -214,24 +247,26 @@ impl Server {
         let id_clone_err = self.id.clone();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stderr).lines();
-            while let Ok(Some(line)) = reader.next_line().await {
-                let _ = handle_clone_err.emit(
-                    "server-log",
-                    LogPayload {
-                        id: id_clone_err.clone(),
-                        line: format!("[ERROR] {}", line),
+            let mut flush_interval = interval(LOG_FLUSH_INTERVAL);
+            let mut pending_lines = Vec::new();
+
+            loop {
+                tokio::select! {
+                    line = reader.next_line() => match line {
+                        Ok(Some(line)) => {
+                            push_pending_log(&mut pending_lines, format!("[ERROR] {}", line));
+                        }
+                        Ok(None) | Err(_) => break,
                     },
-                );
+                    _ = flush_interval.tick() => {
+                        emit_log_batch(&handle_clone_err, &id_clone_err, &mut pending_lines);
+                    },
+                }
             }
 
             // Opcional: Aquí podrías emitir un evento extra indicando que el proceso terminó
-            let _ = handle_clone_err.emit(
-                "server-log",
-                LogPayload {
-                    id: id_clone_err.clone(),
-                    line: "Server process finished.".to_string(),
-                },
-            );
+            push_pending_log(&mut pending_lines, "Server process finished.".to_string());
+            emit_log_batch(&handle_clone_err, &id_clone_err, &mut pending_lines);
         });
 
         Ok(())

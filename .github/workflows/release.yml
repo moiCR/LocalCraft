@@ -23,9 +23,9 @@ jobs:
           - name: "Windows"
             os: windows-latest
             args: "--features updater --config src-tauri/tauri.updater.conf.json --target x86_64-pc-windows-msvc"
-          - name: "Linux AppImage"
+          - name: "Linux"
             os: ubuntu-24.04
-            args: "--features updater --config src-tauri/tauri.updater.conf.json --bundles appimage,deb"
+            args: "--features updater --config src-tauri/tauri.updater.conf.json --bundles appimage,deb,rpm"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -46,6 +46,7 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
+            rpm \
             patchelf \
             desktop-file-utils \
             appstream
