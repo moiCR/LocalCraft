@@ -1,0 +1,14 @@
+[package]
+name = "services"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "services"
+path = "src/services.rs"
+
+[dependencies]
+gpui.workspace = true
+
+tokio.workspace = true
+serde.workspace = true

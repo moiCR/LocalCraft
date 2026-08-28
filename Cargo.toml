@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+
+[workspace.dependencies]
+gpui = "0.2.2"
+serde = {version = "1.0.229", features = ["derive"]}
+tokio = { version = "1.53.1", features = ["full"] }
+anyhow = "1.0.104"
+
+assets = { path = "crates/assets" }
+ui = { path = "crates/ui" }
+services = { path = "crates/services" }
