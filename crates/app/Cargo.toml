@@ -1,0 +1,16 @@
+[package]
+name = "localcraft"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "localcraft"
+path = "src/main.rs"
+
+[dependencies]
+gpui.workspace = true
+tokio.workspace = true
+serde.workspace = true
+
+ui.workspace = true
+assets.workspace = true
