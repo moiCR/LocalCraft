@@ -12,3 +12,6 @@ gpui.workspace = true
 
 tokio.workspace = true
 serde.workspace = true
+dirs = "7.0.0"
+
+ui.workspace = true

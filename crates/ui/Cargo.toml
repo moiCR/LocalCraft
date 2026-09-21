@@ -8,3 +8,4 @@ name = "ui"
 path = "src/ui.rs"
 
 [dependencies]
+gpui.workspace = true
