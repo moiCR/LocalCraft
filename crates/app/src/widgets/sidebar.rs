@@ -1,5 +1,5 @@
 use crate::workspace::{Page, Workspace};
-use gpui::{Context, IntoElement, div, prelude::*, px};
+use gpui::{Context, IntoElement, div, prelude::*, px, svg};
 use services::AppState;
 
 pub fn render(active: Page, cx: &Context<Workspace>) -> impl IntoElement {
@@ -50,11 +50,16 @@ pub fn render(active: Page, cx: &Context<Workspace>) -> impl IntoElement {
                 )
                 .children(
                     [
-                        (Page::Instances, "Instances", "instances"),
-                        (Page::Runtimes, "Runtimes", "runtimes"),
+                        (
+                            Page::Instances,
+                            "Instances",
+                            "instances",
+                            "icons/server.svg",
+                        ),
+                        (Page::Runtimes, "Runtimes", "runtimes", "icons/coffee.svg"),
                     ]
                     .into_iter()
-                    .map(|(page, label, id)| {
+                    .map(|(page, label, id, icon)| {
                         div()
                             .id(id)
                             .flex()
@@ -79,11 +84,7 @@ pub fn render(active: Page, cx: &Context<Workspace>) -> impl IntoElement {
                                 this.active_page = page;
                                 cx.notify();
                             }))
-                            .child(div().w(px(3.)).h_4().rounded_full().bg(if active == page {
-                                palette.accent
-                            } else {
-                                palette.sidebar
-                            }))
+                            .child(svg().path(icon).size_4().flex_shrink_0())
                             .child(label)
                     }),
                 ),

@@ -1,4 +1,4 @@
-use gpui::{Context, IntoElement, div, prelude::*};
+use gpui::{Context, IntoElement, div, prelude::*, svg};
 use services::AppState;
 use ui::theme::Appearance;
 
@@ -24,11 +24,11 @@ pub fn render(cx: &Context<Workspace>) -> impl IntoElement {
         .child(
             div().flex().gap_3().children(
                 [
-                    (Appearance::Dark, "Dark", "theme-dark"),
-                    (Appearance::Light, "Light", "theme-light"),
+                    (Appearance::Dark, "Dark", "theme-dark", "icons/moon.svg"),
+                    (Appearance::Light, "Light", "theme-light", "icons/sun.svg"),
                 ]
                 .into_iter()
-                .map(|(appearance, label, id)| {
+                .map(|(appearance, label, id, icon)| {
                     let selected = active == appearance;
                     div()
                         .id(id)
@@ -57,7 +57,14 @@ pub fn render(cx: &Context<Workspace>) -> impl IntoElement {
                                 state.theme_manager.set_appearance(appearance);
                             });
                         })
-                        .child(label)
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .child(svg().path(icon).size_4().flex_shrink_0())
+                                .child(label),
+                        )
                         .child(
                             div()
                                 .text_xs()

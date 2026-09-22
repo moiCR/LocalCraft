@@ -7,10 +7,24 @@ use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px
 use workspace::Workspace;
 
 fn main() {
+    let runtime = match services::instance::InstancesService::runtime() {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("Failed to initialize background runtime: {error:#}");
+            return;
+        }
+    };
+    let state = match runtime.block_on(services::AppState::new()) {
+        Ok(state) => state,
+        Err(error) => {
+            eprintln!("Failed to initialize application state: {error:#}");
+            return;
+        }
+    };
     Application::new()
         .with_assets(assets::Assets)
-        .run(|cx: &mut App| {
-            cx.set_global(services::AppState::new());
+        .run(move |cx: &mut App| {
+            cx.set_global(state);
             if let Err(error) = cx.text_system().add_fonts(assets::load_fonts()) {
                 eprintln!("Failed to load application fonts: {error}");
             }
