@@ -19,4 +19,8 @@ impl JavaInstallation {
     pub fn binary_path(&self) -> &PathBuf {
         &self.binary_path
     }
+
+    pub fn directory(&self) -> Option<&std::path::Path> {
+        self.binary_path.parent()?.parent()
+    }
 }

@@ -1,14 +1,17 @@
-use std::{collections::VecDeque, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    io::AsyncWriteExt,
     process::{Child, ChildStderr, ChildStdin, ChildStdout},
-    sync::{Mutex, broadcast, mpsc, oneshot, watch},
+    sync::{broadcast, mpsc, oneshot, watch},
     time,
 };
 
-use super::{CONSOLE_CAPACITY, ServerEvent};
+use super::{
+    ServerEvent,
+    console::{self, ConsoleSnapshot},
+};
 
 pub(super) enum Request {
     Command(String, oneshot::Sender<Result<()>>),
@@ -23,13 +26,15 @@ pub(super) async fn run(
     stderr: ChildStderr,
     mut requests: mpsc::Receiver<Request>,
     done: watch::Sender<bool>,
-    console: Arc<Mutex<VecDeque<String>>>,
+    console: watch::Sender<Arc<ConsoleSnapshot>>,
     events: broadcast::Sender<ServerEvent>,
 ) {
-    let (lines, mut incoming) = mpsc::channel(256);
-    let stdout_task = tokio::spawn(read_output(stdout, lines.clone()));
-    let stderr_task = tokio::spawn(read_output(stderr, lines));
-    let mut batch = Vec::new();
+    let (lines, incoming) = mpsc::channel(64);
+    let mut readers = tokio::task::JoinSet::new();
+    readers.spawn(console::read_output(stdout, lines.clone()));
+    readers.spawn(console::read_output(stderr, lines));
+    // Pipe draining must continue even while a server stalls a stdin write.
+    let console_task = tokio::spawn(console::collect(incoming, console));
     let mut tick = time::interval(Duration::from_millis(75));
     let mut shutdown = None;
     let mut terminated = false;
@@ -39,6 +44,9 @@ pub(super) async fn run(
             request = requests.recv(), if shutdown.is_none() => {
                 match request {
                     Some(Request::Command(command, reply)) => {
+                        if reply.is_closed() {
+                            continue;
+                        }
                         let result = write_command(&mut stdin, &command).await;
                         let _ = reply.send(result);
                     }
@@ -52,11 +60,7 @@ pub(super) async fn run(
                     }
                 }
             }
-            Some(line) = incoming.recv() => {
-                if batch.len() < CONSOLE_CAPACITY { batch.push(line); }
-            }
-            _ = tick.tick() => {
-                flush(&mut batch, &console, &events).await;
+            _ = tick.tick(), if shutdown.is_some() => {
                 if shutdown.is_some_and(|deadline| time::Instant::now() >= deadline) {
                     if !terminated {
                         terminate(&mut child);
@@ -70,25 +74,21 @@ pub(super) async fn run(
         }
     };
     // Descendants can inherit pipes; bound draining so they cannot hold shutdown open.
-    let drain_deadline = time::sleep(Duration::from_secs(1));
-    tokio::pin!(drain_deadline);
-    loop {
-        tokio::select! {
-            line = incoming.recv() => match line {
-                Some(line) => {
-                    if batch.len() == CONSOLE_CAPACITY { flush(&mut batch, &console, &events).await; }
-                    batch.push(line);
-                }
-                None => break,
-            },
-            _ = &mut drain_deadline => break,
-        }
+    if time::timeout(Duration::from_secs(1), async {
+        while readers.join_next().await.is_some() {}
+    })
+    .await
+    .is_err()
+    {
+        readers.abort_all();
+        while readers.join_next().await.is_some() {}
     }
-    stdout_task.abort();
-    stderr_task.abort();
-    let _ = stdout_task.await;
-    let _ = stderr_task.await;
-    flush(&mut batch, &console, &events).await;
+    if let Err(error) = console_task.await {
+        let _ = events.send(ServerEvent::Error(format!(
+            "Console reader failed: {error}"
+        )));
+    }
+    let _ = done.send(true);
     match outcome {
         Ok(status) => {
             let _ = events.send(ServerEvent::Exited(status.code()));
@@ -99,7 +99,6 @@ pub(super) async fn run(
             )));
         }
     }
-    let _ = done.send(true);
 }
 
 async fn write_command(stdin: &mut ChildStdin, command: &str) -> Result<()> {
@@ -125,68 +124,6 @@ fn terminate(child: &mut Child) {
     let _ = child.start_kill();
 }
 
-async fn flush(
-    batch: &mut Vec<String>,
-    console: &Mutex<VecDeque<String>>,
-    events: &broadcast::Sender<ServerEvent>,
-) {
-    if batch.is_empty() {
-        return;
-    }
-    let lines = std::mem::take(batch);
-    {
-        let mut console = console.lock().await;
-        for line in &lines {
-            if console.len() == CONSOLE_CAPACITY {
-                console.pop_front();
-            }
-            console.push_back(line.clone());
-        }
-    }
-    let _ = events.send(ServerEvent::Console(lines));
-}
-
-async fn read_output(mut stream: impl AsyncRead + Unpin, output: mpsc::Sender<String>) {
-    let mut buffer = [0_u8; 4096];
-    let mut line = Vec::new();
-    loop {
-        match stream.read(&mut buffer).await {
-            Ok(0) => break,
-            Ok(count) => {
-                for byte in buffer.iter().take(count) {
-                    if *byte == b'\n' {
-                        if output
-                            .send(
-                                String::from_utf8_lossy(&line)
-                                    .trim_end_matches('\r')
-                                    .to_owned(),
-                            )
-                            .await
-                            .is_err()
-                        {
-                            return;
-                        }
-                        line.clear();
-                    } else if line.len() < 8192 {
-                        line.push(*byte);
-                    }
-                }
-            }
-            Err(error) => {
-                let _ = output
-                    .send(format!("Could not read server output: {error}"))
-                    .await;
-                break;
-            }
-        }
-    }
-    if !line.is_empty() {
-        let _ = output
-            .send(String::from_utf8_lossy(&line).into_owned())
-            .await;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,7 +143,7 @@ mod tests {
         let stderr = child.stderr.take().context("Missing stderr")?;
         let (sender, requests) = mpsc::channel(4);
         let (done, mut finished) = watch::channel(false);
-        let console = Arc::new(Mutex::new(VecDeque::new()));
+        let console = console::channel();
         let (events, mut receiver) = broadcast::channel(8);
         let task = tokio::spawn(run(
             child,
@@ -224,9 +161,19 @@ mod tests {
         sender.send(Request::Stop(Duration::from_secs(1))).await?;
         time::timeout(Duration::from_secs(4), finished.wait_for(|value| *value)).await??;
         task.await?;
-        let lines = console.lock().await;
-        assert!(lines.iter().any(|line| line == "list"));
-        assert!(lines.iter().any(|line| line == "stop"));
+        let snapshot = console.borrow().clone();
+        assert!(
+            snapshot
+                .lines
+                .iter()
+                .any(|line| line.content.text == "list")
+        );
+        assert!(
+            snapshot
+                .lines
+                .iter()
+                .any(|line| line.content.text == "stop")
+        );
         let mut exited = false;
         while let Ok(event) = receiver.try_recv() {
             if matches!(event, ServerEvent::Exited(Some(0))) {
@@ -237,24 +184,109 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
-    async fn console_is_bounded() {
-        let console = Mutex::new(VecDeque::new());
-        let (events, _) = broadcast::channel(2);
-        let mut lines = (0..CONSOLE_CAPACITY + 10).map(|n| n.to_string()).collect();
-        flush(&mut lines, &console, &events).await;
-        let console = console.lock().await;
-        assert_eq!(console.len(), CONSOLE_CAPACITY);
-        assert_eq!(console.front().map(String::as_str), Some("10"));
+    async fn blocked_stdin_does_not_block_log_delivery() -> Result<()> {
+        let mut child = tokio::process::Command::new("/bin/sh")
+            .args([
+                "-c",
+                "printf 'ready\\n'; sleep 0.1; printf 'progress\\n'; sleep 1",
+            ])
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()?;
+        let stdin = child.stdin.take().context("Missing stdin")?;
+        let stdout = child.stdout.take().context("Missing stdout")?;
+        let stderr = child.stderr.take().context("Missing stderr")?;
+        let (sender, requests) = mpsc::channel(4);
+        let (done, _) = watch::channel(false);
+        let console = console::channel();
+        let mut snapshots = console.subscribe();
+        let (events, _) = broadcast::channel(4);
+        let task = tokio::spawn(run(
+            child, stdin, stdout, stderr, requests, done, console, events,
+        ));
+        let (reply, mut response) = oneshot::channel();
+        sender
+            .send(Request::Command("x".repeat(1_000_000), reply))
+            .await?;
+        time::timeout(Duration::from_millis(600), async {
+            loop {
+                snapshots.changed().await?;
+                if snapshots
+                    .borrow_and_update()
+                    .lines
+                    .iter()
+                    .any(|line| line.content.text == "progress")
+                {
+                    break;
+                }
+            }
+            Ok::<_, anyhow::Error>(())
+        })
+        .await??;
+        assert!(matches!(
+            response.try_recv(),
+            Err(oneshot::error::TryRecvError::Empty)
+        ));
+        time::timeout(Duration::from_secs(4), task).await??;
+        Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
-    async fn output_caps_long_lines_and_preserves_tail() {
-        let mut bytes = vec![b'x'; 10_000];
-        bytes.extend_from_slice(b"\nlast");
-        let (sender, mut receiver) = mpsc::channel(4);
-        read_output(bytes.as_slice(), sender).await;
-        assert_eq!(receiver.recv().await.map(|line| line.len()), Some(8192));
-        assert_eq!(receiver.recv().await.as_deref(), Some("last"));
+    async fn commands_dispatch_during_a_large_ansi_log_burst() -> Result<()> {
+        let mut child = tokio::process::Command::new("/bin/sh")
+            .args(["-c", "i=0; while [ \"$i\" -lt 10000 ]; do printf '\\033[38;2;255;85;85mline %s\\033[0m\\n' \"$i\"; i=$((i + 1)); done; while IFS= read -r line; do printf '[received] %s\\n' \"$line\"; [ \"$line\" = stop ] && exit 0; done"])
+            .stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped())
+            .kill_on_drop(true).spawn()?;
+        let stdin = child.stdin.take().context("Missing stdin")?;
+        let stdout = child.stdout.take().context("Missing stdout")?;
+        let stderr = child.stderr.take().context("Missing stderr")?;
+        let (sender, requests) = mpsc::channel(4);
+        let (done, _finished) = watch::channel(false);
+        let console = console::channel();
+        let mut snapshots = console.subscribe();
+        let (events, _) = broadcast::channel(4);
+        let task = tokio::spawn(run(
+            child, stdin, stdout, stderr, requests, done, console, events,
+        ));
+        let (reply, response) = oneshot::channel();
+        let started = time::Instant::now();
+        sender.send(Request::Command("list".into(), reply)).await?;
+        time::timeout(Duration::from_millis(500), response).await???;
+        let dispatch = started.elapsed();
+        time::timeout(Duration::from_secs(3), async {
+            loop {
+                snapshots.changed().await?;
+                if snapshots
+                    .borrow_and_update()
+                    .lines
+                    .iter()
+                    .any(|line| line.content.text == "[received] list")
+                {
+                    break;
+                }
+            }
+            Ok::<_, anyhow::Error>(())
+        })
+        .await??;
+        assert!(snapshots.borrow().lines.len() <= super::super::CONSOLE_CAPACITY);
+        assert!(
+            snapshots
+                .borrow()
+                .lines
+                .iter()
+                .all(|line| !line.content.text.contains('\u{1b}'))
+        );
+        eprintln!(
+            "10,000 ANSI lines: stdin acknowledgement={dispatch:?}; command output={:?}",
+            started.elapsed()
+        );
+        sender.send(Request::Stop(Duration::from_secs(1))).await?;
+        time::timeout(Duration::from_secs(3), task).await??;
+        Ok(())
     }
 }

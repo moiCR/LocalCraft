@@ -1,17 +1,11 @@
-use crate::widgets::empty_state;
-use gpui::{Div, prelude::*};
+use super::servers::Servers;
+use gpui::{Div, Entity, div, prelude::*};
 
-pub fn render(palette: &ui::theme::Palette) -> Div {
-    super::page(
-        "Instances",
-        "Your Minecraft servers, all in one place.",
-        "0 servers",
-        palette,
-    )
-    .child(empty_state::render(
-        "◇",
-        "No instances yet",
-        "Your local Minecraft servers will appear here.",
-        palette,
-    ))
+pub fn render(servers: &Entity<Servers>) -> Div {
+    div()
+        .size_full()
+        .min_w_0()
+        .min_h_0()
+        .flex_1()
+        .child(servers.clone())
 }

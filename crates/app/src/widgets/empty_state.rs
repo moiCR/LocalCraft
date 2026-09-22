@@ -1,8 +1,22 @@
-use gpui::{Div, div, prelude::*, px};
+use gpui::{Div, IntoElement, div, prelude::*, px, svg};
 use ui::theme::Palette;
 
-pub fn render(
-    symbol: &'static str,
+pub fn render_icon(
+    icon_path: &'static str,
+    title: &'static str,
+    description: &'static str,
+    palette: &Palette,
+) -> Div {
+    render_with_icon(
+        svg().path(icon_path).size_6().text_color(palette.accent),
+        title,
+        description,
+        palette,
+    )
+}
+
+fn render_with_icon(
+    icon: impl IntoElement,
     title: &'static str,
     description: &'static str,
     palette: &Palette,
@@ -26,9 +40,7 @@ pub fn render(
                 .flex()
                 .items_center()
                 .justify_center()
-                .text_xl()
-                .text_color(palette.accent)
-                .child(symbol),
+                .child(icon),
         )
         .child(div().mt_3().text_lg().child(title))
         .child(

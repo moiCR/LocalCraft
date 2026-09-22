@@ -50,8 +50,10 @@ impl ServerInstance {
             software,
             ram,
             java_version,
+            port: 25565,
+            build: String::new(),
             running: Arc::new(Mutex::new(None)),
-            console: Default::default(),
+            console: super::console::channel(),
             events: event_channel(),
         };
         instance.validate()?;
@@ -204,8 +206,12 @@ impl ServerInstance {
         self.events.subscribe()
     }
 
-    pub async fn console(&self) -> Vec<String> {
-        self.console.lock().await.iter().cloned().collect()
+    pub fn console(&self) -> Arc<super::console::ConsoleSnapshot> {
+        self.console.borrow().clone()
+    }
+
+    pub fn subscribe_console(&self) -> watch::Receiver<Arc<super::console::ConsoleSnapshot>> {
+        self.console.subscribe()
     }
 
     pub async fn is_running(&self) -> bool {
@@ -223,9 +229,8 @@ impl ServerInstance {
         let sender = self.sender().await?;
         let (reply, response) = oneshot::channel();
         sender
-            .send(supervisor::Request::Command(command, reply))
-            .await
-            .context("Server has exited")?;
+            .try_send(supervisor::Request::Command(command, reply))
+            .context("Server command queue is full or closed")?;
         response.await.context("Server has exited")?
     }
 
@@ -258,7 +263,7 @@ impl ServerInstance {
     }
 }
 
-async fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+pub(super) async fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     let temporary = path.with_extension(format!("{}.tmp", Uuid::new_v4()));
     let result = async {
         let mut file = fs::OpenOptions::new()

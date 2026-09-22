@@ -1,9 +1,13 @@
 mod modals;
+mod shell;
 mod views;
 mod widgets;
 mod workspace;
 
-use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
+use gpui::{
+    App, AppContext, Application, BorrowAppContext, Bounds, WindowBounds, WindowOptions, px, size,
+};
+use gpui_router::{RouterState, init as router_init};
 use workspace::Workspace;
 
 fn main() {
@@ -21,10 +25,29 @@ fn main() {
             return;
         }
     };
+    let shutdown = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let shutdown_capture = shutdown.clone();
     Application::new()
         .with_assets(assets::Assets)
         .run(move |cx: &mut App| {
             cx.set_global(state);
+            router_init(cx);
+            cx.update_global::<RouterState, _>(|router, _| {
+                router.with_path("/instances".into());
+            });
+            ui::components::input::init(cx);
+            cx.on_app_quit(move |cx| {
+                let mut servers = shutdown_capture
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                *servers = cx
+                    .global::<services::AppState>()
+                    .instance_service
+                    .servers()
+                    .to_vec();
+                async {}
+            })
+            .detach();
             if let Err(error) = cx.text_system().add_fonts(assets::load_fonts()) {
                 eprintln!("Failed to load application fonts: {error}");
             }
@@ -33,13 +56,14 @@ fn main() {
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     window_min_size: Some(size(px(720.), px(480.))),
-                    titlebar: Some(gpui::TitlebarOptions {
-                        title: Some("LocalCraft".into()),
-                        ..Default::default()
-                    }),
+                    titlebar: None,
+                    window_decorations: Some(gpui::WindowDecorations::Client),
                     ..Default::default()
                 },
-                |_, cx| cx.new(Workspace::new),
+                |window, cx| {
+                    window.set_window_title("LocalCraft");
+                    cx.new(Workspace::new)
+                },
             );
             if let Err(error) = result {
                 eprintln!("Failed to open LocalCraft: {error}");
@@ -54,4 +78,23 @@ fn main() {
             .detach();
             cx.activate(true);
         });
+    let servers = std::mem::take(
+        &mut *shutdown
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    );
+    runtime.block_on(async move {
+        let mut stops = tokio::task::JoinSet::new();
+        for server in servers {
+            stops.spawn(async move { server.stop(std::time::Duration::from_secs(30)).await });
+        }
+        while let Some(result) = stops.join_next().await {
+            if let Err(error) = result
+                .map_err(anyhow::Error::from)
+                .and_then(|result| result)
+            {
+                eprintln!("Could not stop server during shutdown: {error:#}");
+            }
+        }
+    });
 }

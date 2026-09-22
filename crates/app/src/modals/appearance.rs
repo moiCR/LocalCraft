@@ -62,7 +62,13 @@ pub fn render(cx: &Context<Workspace>) -> impl IntoElement {
                                 .flex()
                                 .items_center()
                                 .gap_2()
-                                .child(svg().path(icon).size_4().flex_shrink_0())
+                                .child(
+                                    svg()
+                                        .path(icon)
+                                        .size_4()
+                                        .flex_shrink_0()
+                                        .text_color(palette.text),
+                                )
                                 .child(label),
                         )
                         .child(

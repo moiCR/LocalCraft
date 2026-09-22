@@ -1,13 +1,15 @@
 pub mod instances;
 pub mod runtimes;
+pub mod servers;
 
-use gpui::{Div, div, prelude::*};
+use gpui::{Animation, AnimationExt, Div, IntoElement, div, ease_out_quint, prelude::*, px};
+use std::time::Duration;
 use ui::theme::Palette;
 
 fn page(
     title: &'static str,
     description: &'static str,
-    count: &'static str,
+    count: impl gpui::IntoElement,
     palette: &Palette,
 ) -> Div {
     div()
@@ -43,4 +45,16 @@ fn page(
                         .child(count),
                 ),
         )
+}
+
+pub fn animate_page(page: Div, name: &'static str) -> impl IntoElement {
+    page.with_animation(
+        name,
+        Animation::new(Duration::from_millis(240)).with_easing(ease_out_quint()),
+        |page, progress| {
+            page.relative()
+                .top(px(10.0 * (1.0 - progress)))
+                .opacity(progress)
+        },
+    )
 }

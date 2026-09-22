@@ -100,8 +100,13 @@ mod tests {
         let address = listener.local_addr()?;
         let task = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await?;
-            let mut request = [0_u8; 4096];
-            stream.read(&mut request).await?;
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                if request.len() >= 8192 {
+                    bail!("Test request header is too large");
+                }
+                request.push(stream.read_u8().await?);
+            }
             stream
                 .write_all(
                     format!(

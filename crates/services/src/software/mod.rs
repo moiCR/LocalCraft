@@ -1,3 +1,4 @@
+pub mod catalog;
 mod download;
 pub mod fabric;
 pub mod forge;
@@ -123,6 +124,54 @@ impl SoftwareService {
         let jar = self
             .resolve(&client, &server.software, &server.version)
             .await?;
+        self.install_resolved(server, java, expected_sha256, progress, &jar, &client)
+            .await
+    }
+
+    pub async fn download_resolved(
+        &self,
+        server: &ServerInstance,
+        java: &Path,
+        expected_sha256: Option<&str>,
+        progress: &watch::Sender<DownloadProgress>,
+        jar: &JarDownload,
+    ) -> Result<()> {
+        let running = server.running.lock().await;
+        if running
+            .as_ref()
+            .is_some_and(|process| !*process.finished.borrow())
+        {
+            bail!("Stop the server before installing software");
+        }
+        let result = self
+            .install_resolved(
+                server,
+                Some(java),
+                expected_sha256,
+                progress,
+                jar,
+                &client()?,
+            )
+            .await;
+        progress.send_modify(|value| {
+            value.stage = match &result {
+                Ok(()) => DownloadStage::Complete,
+                Err(error) => DownloadStage::Failed(format!("{error:#}")),
+            }
+        });
+        result
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn install_resolved(
+        &self,
+        server: &ServerInstance,
+        java: Option<&Path>,
+        expected_sha256: Option<&str>,
+        progress: &watch::Sender<DownloadProgress>,
+        jar: &JarDownload,
+        client: &Client,
+    ) -> Result<()> {
         let hash =
             jar.sha256.as_deref().or(expected_sha256).context(
                 "This provider does not publish SHA256; supply a trusted expected SHA256",
@@ -135,7 +184,7 @@ impl SoftwareService {
         let directory = server.directory()?;
         match &jar.kind {
             JarKind::Server => {
-                download::save(&client, &jar, hash, &directory.join("server.jar"), progress).await?
+                download::save(client, jar, hash, &directory.join("server.jar"), progress).await?
             }
             JarKind::ForgeInstaller { version } => {
                 let java = java.context("Select a Java executable before installing Forge")?;
@@ -143,7 +192,7 @@ impl SoftwareService {
                     .await
                     .context("Could not resolve Java executable")?;
                 let installer = directory.join("forge-installer.jar");
-                download::save(&client, &jar, hash, &installer, progress).await?;
+                download::save(client, jar, hash, &installer, progress).await?;
                 progress.send_modify(|value| value.stage = DownloadStage::Installing);
                 let result = forge::install(&java, &installer, &directory, version).await;
                 let _ = tokio::fs::remove_file(&installer).await;

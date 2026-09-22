@@ -1,8 +1,10 @@
+mod ansi;
+pub mod configuration;
+pub mod console;
 pub mod server_instance;
 mod supervisor;
 
 use std::{
-    collections::VecDeque,
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -18,7 +20,6 @@ pub const CONSOLE_CAPACITY: usize = 2_000;
 
 #[derive(Debug, Clone)]
 pub enum ServerEvent {
-    Console(Vec<String>),
     Exited(Option<i32>),
     Error(String),
 }
@@ -42,14 +43,19 @@ pub struct ServerInstance {
     /// Maximum heap in MiB.
     pub ram: String,
     pub java_version: Option<String>,
+    #[serde(default = "configuration::default_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub build: String,
     #[serde(skip, default)]
     pub(crate) running: Arc<Mutex<Option<RunningServer>>>,
-    #[serde(skip, default)]
-    console: Arc<Mutex<VecDeque<String>>>,
+    #[serde(skip, default = "console::channel")]
+    console: watch::Sender<Arc<console::ConsoleSnapshot>>,
     #[serde(skip, default = "event_channel")]
     events: broadcast::Sender<ServerEvent>,
 }
 
+#[derive(Default)]
 pub struct InstancesService {
     servers: Vec<ServerInstance>,
 }
@@ -57,6 +63,14 @@ pub struct InstancesService {
 impl InstancesService {
     pub fn servers(&self) -> &[ServerInstance] {
         &self.servers
+    }
+
+    pub fn insert(&mut self, server: ServerInstance) {
+        if let Some(existing) = self.servers.iter_mut().find(|item| item.id == server.id) {
+            *existing = server;
+        } else {
+            self.servers.push(server);
+        }
     }
 
     pub async fn new() -> Result<Self> {
@@ -118,6 +132,11 @@ impl InstancesService {
                 continue;
             }
             let path = entry.path().join("config.json");
+            if !fs::try_exists(&path).await?
+                && fs::try_exists(entry.path().join("config.pending")).await?
+            {
+                continue;
+            }
             let bytes = fs::read(&path)
                 .await
                 .with_context(|| format!("Could not read {}", path.display()))?;

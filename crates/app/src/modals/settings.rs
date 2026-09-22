@@ -1,4 +1,9 @@
-use gpui::{Context, IntoElement, MouseButton, div, prelude::*, px, rgba};
+use std::time::Duration;
+
+use gpui::{
+    Animation, AnimationExt, Context, IntoElement, MouseButton, div, ease_out_quint, prelude::*,
+    px, rgba,
+};
 use services::AppState;
 
 use super::appearance;
@@ -129,6 +134,16 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                                 }))
                                 .child("Done"),
                         ),
+                )
+                .with_animation(
+                    "settings-dialog-enter",
+                    Animation::new(Duration::from_millis(300)).with_easing(ease_out_quint()),
+                    |dialog, progress| dialog.relative().top(px(10. * (1. - progress))),
                 ),
+        )
+        .with_animation(
+            "settings-overlay-enter",
+            Animation::new(Duration::from_millis(300)).with_easing(ease_out_quint()),
+            |overlay, progress| overlay.opacity(progress),
         )
 }
