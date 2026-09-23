@@ -10,12 +10,12 @@ impl Default for LightTheme {
         Self {
             palette: Palette {
                 background: rgb(0xffffff),
-                sidebar: rgb(0xfafafa),
-                surface: rgb(0xf0f0f0),
-                border: rgb(0xe5e5e5),
-                text: rgb(0x171717),
+                sidebar: rgb(0xCFCFCF),
+                surface: rgb(0xCFCFCF),
+                border: rgb(0x9E9E9E),
+                text: rgb(0x0D0D0D),
                 muted: rgb(0x666666),
-                accent: rgb(0x171717),
+                accent: rgb(0xB6B6B6),
             },
         }
     }
