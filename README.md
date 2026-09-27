@@ -1,27 +1,21 @@
-# 🏗️ LocalCraft
+# LocalCraft
+A local Minecraft server manager built with GPUI (The Zed UI framework).
 
-<div align="center">
-  <img src="icon.png" width="128" height="128" alt="LocalCraft Logo">
-  <p align="center">
-    <strong>A high-performance, modern Minecraft server manager built with Tauri and Vue.</strong>
-  </p>
+## Scope
+**LocalCraft** is a desktop application designed to simplify the creation and management of local Minecraft servers.
 
-  [![Version](https://img.shields.io/badge/version-0.6.2-blue.svg)](https://github.com/your-username/localcraft-vuew)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#)
-</div>
+Instead of manually installing Java runtimes, downloading server software such as Paper, Spigot, or Vanilla, configuring directories, and managing multiple server environments, LocalCraft brings everything together into a single streamlined interface.
 
-## ✨ Introduction
+The application allows users to create and manage isolated server instances, automatically handle the required Java runtimes, configure server distributions, and keep each environment organized without relying on complex manual setups.
 
-LocalCraft is a desktop application designed to simplify the process of hosting and managing Minecraft servers locally. Leveraging the power of **Tauri** for a lightweight backend and **Vue 3** for a sleek, responsive UI, it provides a premium experience for both casual players and power users.
+LocalCraft also integrates with **Playit**, making it easy to expose locally hosted servers to the internet without requiring port forwarding or a public IP address.
 
-## 🚀 Current Features
+Its goal is to provide developers, server administrators, and Minecraft enthusiasts with a simple and modern way to build, test, manage, and share local Minecraft servers.
 
-- **Java Management**: Automatic detection and download of different JRE versions.
-- **Server Creation**: Intuitive wizard to configure software (Vanilla, Paper, Fabric, etc.) and versions.
-- **Modern Interface**: Fluid animations with GSAP and minimalist design.
-- **Cross-platform**: Compatible with Linux, Windows, and macOS thanks to Tauri.
+## Showcase
 
-<div align="center">
-  Made with ❤️ by Moisés Marenco Vives
-</div>
+## Features
+
+## Special Thanks
+[Zed](https://github.com/zed-industries/zed): for creating gpui and making it open source
+[Mojang](https://www.minecraft.net/es-es): for creating the best game ever.
