@@ -174,22 +174,21 @@ impl SoftwareService {
                     &format!("https://api.purpurmc.org/v2/purpur/{version}"),
                 )
                 .await?;
-                let mut builds = strings(data.get("builds").and_then(|v| v.get("all")));
-                builds.reverse();
-                builds
-                    .into_iter()
-                    .map(|build| BuildOption {
-                        label: build.clone(),
-                        download: JarDownload {
-                            url: format!(
-                                "https://api.purpurmc.org/v2/purpur/{version}/{build}/download"
-                            ),
-                            sha256: None,
-                            size: None,
-                            kind: JarKind::Server,
-                        },
-                    })
-                    .collect()
+                let build = text(
+                    data.get("builds").context("Missing Purpur builds")?,
+                    "latest",
+                )?;
+                vec![BuildOption {
+                    label: build.clone(),
+                    download: JarDownload {
+                        url: format!(
+                            "https://api.purpurmc.org/v2/purpur/{version}/{build}/download"
+                        ),
+                        sha256: None,
+                        size: None,
+                        kind: JarKind::Server,
+                    },
+                }]
             }
             "Fabric" => {
                 let installers =
@@ -206,7 +205,7 @@ impl SoftwareService {
                     &format!("https://meta.fabricmc.net/v2/versions/loader/{version}"),
                 )
                 .await?;
-                loaders.as_array().context("Missing Fabric loaders")?.iter()
+                let mut builds = loaders.as_array().context("Missing Fabric loaders")?.iter()
                     .filter_map(|entry| entry.get("loader"))
                     .filter(|entry| entry.get("stable").and_then(Value::as_bool) == Some(true))
                     .map(|loader| {
@@ -217,7 +216,9 @@ impl SoftwareService {
                             url: format!("https://meta.fabricmc.net/v2/versions/loader/{version}/{loader}/{installer}/server/jar"),
                             sha256: None, size: None, kind: JarKind::Server,
                         }})
-                    }).collect::<Result<Vec<_>>>()?
+                    }).collect::<Result<Vec<_>>>()?;
+                builds.sort_by_key(|build| std::cmp::Reverse(version_key(&build.label)));
+                builds
             }
             "Forge" | "Vanilla" => {
                 let download = self.get_jar(software, version).await?;

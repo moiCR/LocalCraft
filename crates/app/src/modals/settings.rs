@@ -35,6 +35,8 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                 .track_focus(&workspace.settings_focus)
                 .w(px(480.))
                 .max_w_full()
+                .max_h_full()
+                .min_h_0()
                 .flex()
                 .flex_col()
                 .bg(palette.background)
@@ -84,24 +86,50 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                         .child(
                             div()
                                 .id("close-settings")
+                                .w(px(36.))
+                                .h(px(36.))
+                                .flex()
+                                .items_center()
+                                .justify_center()
                                 .cursor_pointer()
                                 .rounded_md()
-                                .px_2()
-                                .py_1()
-                                .text_color(palette.muted)
+                                .border_1()
+                                .border_color(palette.border)
+                                .text_color(palette.text)
                                 .hover(|style| style.bg(palette.surface).text_color(palette.text))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.close_settings(window, cx)
                                 }))
-                                .child(svg().path("icons/close.svg").size_4()),
+                                .child(
+                                    svg()
+                                        .path("icons/close.svg")
+                                        .size_4()
+                                        .text_color(palette.text),
+                                ),
                         ),
                 )
                 .child(
                     div()
-                        .border_t_1()
-                        .border_color(palette.border)
-                        .p_6()
-                        .child(appearance::render(cx)),
+                        .id("settings-content")
+                        .flex()
+                        .flex_col()
+                        .min_h_0()
+                        .max_h(px(500.))
+                        .overflow_y_scroll()
+                        .child(
+                            div()
+                                .border_t_1()
+                                .border_color(palette.border)
+                                .p_6()
+                                .child(appearance::render(cx)),
+                        )
+                        .child(
+                            div()
+                                .border_t_1()
+                                .border_color(palette.border)
+                                .p_6()
+                                .child(workspace.settings_preferences.clone()),
+                        ),
                 )
                 .child(
                     div()
@@ -117,7 +145,7 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                             div()
                                 .text_xs()
                                 .text_color(palette.muted)
-                                .child("Applied immediately · This session only"),
+                                .child("Changes are saved automatically."),
                         )
                         .child(
                             div()

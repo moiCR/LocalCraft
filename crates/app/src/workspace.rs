@@ -36,20 +36,37 @@ pub struct Workspace {
     pub sidebar_motion: crate::shell::SidebarMotion,
     pub settings_open: bool,
     pub settings_focus: FocusHandle,
+    pub settings_preferences:
+        gpui::Entity<crate::modals::settings_preferences::SettingsPreferences>,
+    sidebar_collapsed_setting: bool,
     previous_focus: Option<FocusHandle>,
 }
 
 impl Workspace {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        cx.observe_global::<AppState>(|_, cx| cx.notify()).detach();
+        let sidebar_collapsed_setting = cx.global::<AppState>().preferences.sidebar_collapsed;
+        cx.observe_global::<AppState>(|this, cx| {
+            let collapsed = cx.global::<AppState>().preferences.sidebar_collapsed;
+            if this.sidebar_collapsed_setting != collapsed {
+                this.sidebar_collapsed_setting = collapsed;
+                this.sidebar_motion.set_visible(!collapsed);
+            }
+            cx.notify();
+        })
+        .detach();
         Self {
             servers: cx.new(views::servers::Servers::new),
             runtimes: cx.new(views::runtimes::Runtimes::new),
             playit: cx.new(views::playit::Playit::new),
             navigation: crate::shell::Navigation::default(),
-            sidebar_motion: crate::shell::SidebarMotion::default(),
+            sidebar_motion: crate::shell::SidebarMotion::with_visibility(
+                !sidebar_collapsed_setting,
+            ),
             settings_open: false,
             settings_focus: cx.focus_handle(),
+            settings_preferences: cx
+                .new(crate::modals::settings_preferences::SettingsPreferences::new),
+            sidebar_collapsed_setting,
             previous_focus: None,
         }
     }

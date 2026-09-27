@@ -14,11 +14,13 @@ use super::{DownloadProgress, DownloadStage, JarDownload};
 pub(super) async fn save(
     client: &Client,
     jar: &JarDownload,
-    expected: &str,
+    expected: Option<&str>,
     destination: &Path,
     progress: &watch::Sender<DownloadProgress>,
 ) -> Result<()> {
-    if expected.len() != 64 || !expected.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if expected.is_some_and(|expected| {
+        expected.len() != 64 || !expected.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }) {
         bail!("Expected SHA256 must contain 64 hexadecimal characters");
     }
     let temporary = destination.with_extension(format!("{}.tmp", Uuid::new_v4()));
@@ -32,7 +34,7 @@ pub(super) async fn save(
 async fn transfer(
     client: &Client,
     jar: &JarDownload,
-    expected: &str,
+    expected: Option<&str>,
     temporary: &Path,
     destination: &Path,
     progress: &watch::Sender<DownloadProgress>,
@@ -49,7 +51,7 @@ async fn transfer(
         .write(true)
         .open(temporary)
         .await?;
-    let mut digest = Sha256::new();
+    let mut digest = expected.map(|_| Sha256::new());
     let mut downloaded = 0_u64;
     let mut last_update = Instant::now();
     progress.send_modify(|value| {
@@ -66,7 +68,9 @@ async fn transfer(
             bail!("Download exceeds its expected size");
         }
         file.write_all(&chunk).await?;
-        digest.update(&chunk);
+        if let Some(digest) = &mut digest {
+            digest.update(&chunk);
+        }
         if last_update.elapsed() >= Duration::from_millis(100) {
             progress.send_modify(|value| value.downloaded = downloaded);
             last_update = Instant::now();
@@ -79,7 +83,9 @@ async fn transfer(
     if downloaded == 0 || total.is_some_and(|total| downloaded != total) {
         bail!("Incomplete server jar download");
     }
-    if !format!("{:x}", digest.finalize()).eq_ignore_ascii_case(expected) {
+    if let (Some(expected), Some(digest)) = (expected, digest)
+        && !format!("{:x}", digest.finalize()).eq_ignore_ascii_case(expected)
+    {
         bail!("Server jar SHA256 verification failed");
     }
     file.sync_all().await?;

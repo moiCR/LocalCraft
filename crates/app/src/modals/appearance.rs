@@ -4,6 +4,8 @@ use ui::theme::Appearance;
 
 pub fn set_app_appearance(state: &mut AppState, cx: &mut App, appearance: Appearance) {
     state.theme_manager.set_appearance(appearance);
+    state.preferences.dark_theme = appearance == Appearance::Dark;
+    state.save_preferences();
     let mode = match appearance {
         Appearance::Dark => gpui_kit::component::theme::ThemeMode::Dark,
         Appearance::Light => gpui_kit::component::theme::ThemeMode::Light,

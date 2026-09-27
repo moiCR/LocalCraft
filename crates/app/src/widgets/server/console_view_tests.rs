@@ -45,6 +45,9 @@ fn initialize(cx: &mut TestAppContext) -> anyhow::Result<tokio::runtime::Runtime
         background_runtime: runtime.handle().clone(),
         software_service: SoftwareService::new(),
         playit_service: Arc::new(services::playit::PlayitService::new()),
+        preferences: Default::default(),
+        preferences_store: Default::default(),
+        preferences_revision: std::sync::atomic::AtomicU64::new(0),
     });
     Ok(runtime)
 }
@@ -54,6 +57,7 @@ fn snapshot(count: usize) -> Arc<ConsoleSnapshot> {
         lines: (0..count)
             .map(|sequence| ConsoleLine {
                 sequence: sequence as u64,
+                timestamp: services::instance::console::timestamp_now(),
                 content: ConsoleText::plain(format!(
                     "[server/INFO] Log {sequence}: {}",
                     "x".repeat(200)
@@ -194,6 +198,7 @@ fn long_lines_stay_single_rows_and_copy_in_full(cx: &mut TestAppContext) {
         lines: (0..CONSOLE_CAPACITY)
             .map(|sequence| ConsoleLine {
                 sequence: sequence as u64,
+                timestamp: services::instance::console::timestamp_now(),
                 content: text.clone(),
             })
             .collect(),

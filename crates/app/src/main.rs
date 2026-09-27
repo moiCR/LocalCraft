@@ -39,11 +39,11 @@ fn main() {
                 router.with_path("/instances".into());
             });
             gpui_kit::init(cx);
-            gpui_kit::component::theme::Theme::change(
-                gpui_kit::component::theme::ThemeMode::Dark,
-                None,
-                cx,
-            );
+            let theme_mode = match cx.global::<services::AppState>().theme_manager.appearance() {
+                ui::theme::Appearance::Dark => gpui_kit::component::theme::ThemeMode::Dark,
+                ui::theme::Appearance::Light => gpui_kit::component::theme::ThemeMode::Light,
+            };
+            gpui_kit::component::theme::Theme::change(theme_mode, None, cx);
             ui::components::input::init(cx);
             cx.on_app_quit(move |cx| {
                 let mut servers = shutdown_capture

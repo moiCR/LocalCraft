@@ -59,23 +59,38 @@ pub struct SidebarMotion {
 
 impl Default for SidebarMotion {
     fn default() -> Self {
-        Self {
-            visible: true,
-            revision: 0,
-            from: 1.,
-            started: Instant::now(),
-        }
+        Self::with_visibility(true)
     }
 }
 
 impl SidebarMotion {
+    pub fn with_visibility(visible: bool) -> Self {
+        let value = if visible { 1. } else { 0. };
+        Self {
+            visible,
+            revision: 0,
+            from: value,
+            started: Instant::now(),
+        }
+    }
+
     pub fn toggle(&mut self) {
         self.toggle_at(Instant::now());
     }
 
     fn toggle_at(&mut self, now: Instant) {
+        self.set_visible_at(!self.visible, now);
+    }
+
+    pub fn set_visible(&mut self, visible: bool) {
+        if self.visible != visible {
+            self.set_visible_at(visible, Instant::now());
+        }
+    }
+
+    fn set_visible_at(&mut self, visible: bool, now: Instant) {
         self.from = self.value_at(now);
-        self.visible = !self.visible;
+        self.visible = visible;
         self.started = now;
         self.revision = self.revision.wrapping_add(1);
     }

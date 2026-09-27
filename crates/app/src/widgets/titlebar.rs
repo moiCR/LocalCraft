@@ -1,15 +1,18 @@
 use crate::workspace::Workspace;
 use gpui::{
-    App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge, Window, WindowControlArea,
-    div, prelude::*, px, rgb, svg,
+    Animation, AnimationExt, App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge,
+    Window, WindowControlArea, div, prelude::*, px, rgb, svg,
 };
 use gpui_router::RouterState;
 use services::AppState;
+use std::time::Duration;
 use ui::theme::Palette;
 
 pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -> impl IntoElement {
     let palette = cx.global::<AppState>().theme_manager.palette();
     let maximized = window.is_maximized();
+    let sidebar_collapsed = !workspace.sidebar_motion.visible;
+    let sidebar_revision = workspace.sidebar_motion.revision;
     div()
         .flex()
         .items_center()
@@ -35,6 +38,13 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                     )
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.sidebar_motion.toggle();
+                        let collapsed = !this.sidebar_motion.visible;
+                        cx.update_global::<AppState, _>(|state, _| {
+                            if state.preferences.sidebar_collapsed != collapsed {
+                                state.preferences.sidebar_collapsed = collapsed;
+                                state.save_preferences();
+                            }
+                        });
                         cx.notify();
                     })),
                 )
@@ -81,10 +91,29 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                 .h_full()
                 .flex()
                 .items_center()
-                .px_4()
+                .justify_center()
+                .pl_6()
+                .pr_2()
                 .text_xs()
                 .text_color(palette.muted);
             drag_area
+                .when(sidebar_collapsed, |area| {
+                    area.child(
+                        div()
+                            .id("collapsed-sidebar-logo")
+                            .with_animation(
+                                ("collapsed-sidebar-logo-fade", sidebar_revision),
+                                Animation::new(Duration::from_millis(300)),
+                                |logo, progress| logo.opacity(progress),
+                            )
+                            .child(
+                                svg()
+                                    .path("icons/logo.svg")
+                                    .size_5()
+                                    .text_color(palette.text),
+                            ),
+                    )
+                })
                 .when(!cfg!(target_os = "windows"), |element| {
                     element.on_mouse_down(MouseButton::Left, |event, window, _| {
                         if event.click_count == 2 {

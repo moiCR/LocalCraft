@@ -50,7 +50,7 @@
   - Java runtime downloads (Adoptium/Zulu API) and server jar downloads must be executed via `reqwest` streaming on Tokio.
   - Stream progress chunks through channels to update UI progress bars without blocking.
   - Archive extraction (`tar.gz`, `zip`) must run on Tokio blocking thread pools (`tokio::task::spawn_blocking`).
-  - Always verify SHA256 checksums before extracting or running downloaded binaries.
+  - Verify published SHA256 checksums before extracting or running downloaded binaries. If a provider publishes no SHA256, allow the HTTPS download and verify the advertised size when available; do not require users to enter a checksum.
 - **Cross-Platform Executable Permissions**:
   - When extracting Java runtimes on Linux/macOS, explicitly restore executable permissions (`chmod +x` / `std::os::unix::fs::PermissionsExt`) on `bin/java` and related binaries.
 - **Atomic File Modifications**:

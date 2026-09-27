@@ -2,7 +2,8 @@
 
 `SoftwareService::new()` creates the service. Providers resolve a Minecraft version
 into `JarDownload` metadata; the shared downloader streams the artifact into a
-unique temporary file, checks its SHA256 and size, then replaces the destination.
+unique temporary file, checks its SHA256 when published and its size when known,
+then replaces the destination.
 Paper, Vanilla and Fabric produce `server.jar`. Forge downloads and runs its
 installer with an explicitly selected Java executable and records the installed
 version for the instance launcher.
@@ -27,13 +28,11 @@ software_service.download(&server, None, None, &progress).await?;
 software_service.download(&server, Some(java.binary_path()), None, &progress).await?;
 ```
 
-The project requires a trusted SHA256 before installation. Vanilla's manifest
-publishes SHA1, and Fabric's generated launcher endpoint does not publish SHA256.
-For those providers, first resolve with `get_jar`, obtain a trusted SHA256 for that
-exact URL, then pass it as `expected_sha256` to `download`. Forge uses its Maven
-`.sha256` sidecar when available and otherwise requires the same explicit hash.
-A digest calculated from an unverified download is not a trusted expected hash.
-If the resolved build changes, verification fails instead of installing it.
+SHA256 is verified when a provider publishes it. Downloads without a published
+SHA256 still use HTTPS and are checked against their known size. Mojang publishes
+SHA1 for Vanilla, while Fabric's generated server jar has no published checksum.
+Forge uses its Maven `.sha256` sidecar when available. Callers may pass
+`expected_sha256` when they have a trusted hash for the exact artifact.
 
 Downloads hold the instance lifecycle lock, preventing start or concurrent
 installation while replacing files. Running instances cannot be updated.

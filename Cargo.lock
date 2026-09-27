@@ -7308,6 +7308,7 @@ name = "services"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "dirs 7.0.0",
  "flate2",
  "gpui-pre",

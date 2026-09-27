@@ -1,14 +1,18 @@
 use gpui::{ScrollStrategy, UniformListScrollHandle, point, px};
 use services::instance::{
     CONSOLE_CAPACITY,
-    console::{ConsoleSnapshot, ConsoleText},
+    console::{ConsoleSnapshot, ConsoleText, timestamp_now},
 };
-use std::{collections::VecDeque, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 
 pub const ROW_HEIGHT: f32 = 22.;
 
 pub struct Console {
     pub rows: VecDeque<(usize, Arc<ConsoleText>)>,
+    timestamps: HashMap<usize, String>,
     visible_rows: VecDeque<usize>,
     filter: String,
     next_id: usize,
@@ -21,6 +25,7 @@ impl Default for Console {
     fn default() -> Self {
         Self {
             rows: VecDeque::with_capacity(CONSOLE_CAPACITY),
+            timestamps: HashMap::with_capacity(CONSOLE_CAPACITY),
             visible_rows: VecDeque::new(),
             filter: String::new(),
             next_id: 0,
@@ -46,7 +51,7 @@ impl Console {
         });
         let mut changed = false;
         for line in snapshot.lines.iter().skip(start) {
-            changed |= self.push(line.content.clone());
+            changed |= self.push(line.content.clone(), line.timestamp.clone());
             self.last_sequence = Some(line.sequence);
         }
         if changed {
@@ -56,16 +61,17 @@ impl Console {
     }
 
     pub fn echo(&mut self, text: String) {
-        if self.push(ConsoleText::plain(text)) {
+        if self.push(ConsoleText::plain(text), timestamp_now()) {
             self.follow_tail();
         }
     }
 
-    fn push(&mut self, line: Arc<ConsoleText>) -> bool {
+    fn push(&mut self, line: Arc<ConsoleText>, timestamp: String) -> bool {
         let mut removed_visible = false;
         if self.rows.len() == CONSOLE_CAPACITY
             && let Some((id, _)) = self.rows.pop_front()
         {
+            self.timestamps.remove(&id);
             removed_visible = self.filter.is_empty() || self.visible_rows.front() == Some(&id);
             if self.visible_rows.front() == Some(&id) {
                 self.visible_rows.pop_front();
@@ -75,6 +81,7 @@ impl Console {
         if !self.filter.is_empty() && matches {
             self.visible_rows.push_back(self.next_id);
         }
+        self.timestamps.insert(self.next_id, timestamp);
         self.rows.push_back((self.next_id, line));
         self.next_id = self.next_id.wrapping_add(1);
         if removed_visible && !self.follow {
@@ -122,6 +129,7 @@ impl Console {
 
     pub fn clear(&mut self) {
         self.rows.clear();
+        self.timestamps.clear();
         self.visible_rows.clear();
         self.scroll
             .0
@@ -140,6 +148,10 @@ impl Console {
     pub fn pause_follow(&mut self) {
         self.follow = false;
     }
+
+    pub fn timestamp(&self, id: usize) -> Option<&str> {
+        self.timestamps.get(&id).map(String::as_str)
+    }
 }
 
 #[cfg(test)]
@@ -152,6 +164,7 @@ mod tests {
             lines: range
                 .map(|sequence| ConsoleLine {
                     sequence,
+                    timestamp: timestamp_now(),
                     content: ConsoleText::plain(format!("Row {sequence}")),
                 })
                 .collect(),

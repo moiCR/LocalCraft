@@ -18,7 +18,12 @@ const READ_BATCH_LINES: usize = 32;
 #[derive(Clone, Debug)]
 pub struct ConsoleLine {
     pub sequence: u64,
+    pub timestamp: String,
     pub content: Arc<ConsoleText>,
+}
+
+pub fn timestamp_now() -> String {
+    chrono::Local::now().format("%H:%M:%S").to_string()
 }
 
 #[derive(Default, Debug)]
@@ -52,7 +57,11 @@ pub(super) async fn collect(
                 Some(batch) => {
                     for content in batch {
                         if ring.len() == CONSOLE_CAPACITY { ring.pop_front(); }
-                        ring.push_back(ConsoleLine { sequence: next_sequence, content });
+                        ring.push_back(ConsoleLine {
+                            sequence: next_sequence,
+                            timestamp: timestamp_now(),
+                            content,
+                        });
                         next_sequence = next_sequence.saturating_add(1);
                         dirty = true;
                     }

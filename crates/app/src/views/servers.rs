@@ -28,9 +28,7 @@ pub struct Servers {
     delete_error: Option<String>,
     delete_closing: bool,
     delete_generation: u64,
-    origin: Bounds<Pixels>,
     bounds: Rc<Cell<Bounds<Pixels>>>,
-    button_bounds: Rc<Cell<Bounds<Pixels>>>,
     focus: FocusHandle,
     window: Option<AnyWindowHandle>,
 }
@@ -50,9 +48,7 @@ impl Servers {
             delete_error: None,
             delete_closing: false,
             delete_generation: 0,
-            origin: Bounds::default(),
             bounds: Rc::default(),
-            button_bounds: Rc::default(),
             focus: cx.focus_handle().tab_index(0),
             window: None,
         }
@@ -164,9 +160,6 @@ impl Servers {
             return;
         }
         self.window = Some(window.window_handle());
-        let parent = self.bounds.get();
-        let button = self.button_bounds.get();
-        self.origin = Bounds::new(button.origin - parent.origin, button.size);
         self.closing = false;
         let modal = cx.new(CreateServerModal::new);
         let focus = modal.read(cx).focus.clone();
@@ -207,11 +200,15 @@ impl Servers {
         })
         .detach();
     }
-    fn morph(&self, modal: Entity<CreateServerModal>, cx: &Context<Self>) -> impl IntoElement {
+    fn create_overlay(
+        &self,
+        modal: Entity<CreateServerModal>,
+        cx: &Context<Self>,
+    ) -> impl IntoElement {
         let palette = cx.global::<AppState>().theme_manager.palette();
         let bounds = self.bounds.get();
         let width = (bounds.size.width - px(24.)).min(px(560.)).max(px(1.));
-        let height = (bounds.size.height - px(24.)).min(px(680.)).max(px(1.));
+        let height = (bounds.size.height - px(24.)).min(px(500.)).max(px(1.));
         let target = Bounds::new(
             point(
                 (bounds.size.width - width) / 2.,
@@ -219,7 +216,6 @@ impl Servers {
             ),
             size(width, height),
         );
-        let source = self.origin;
         let closing = self.closing;
         div()
             .id("server-create-overlay")
@@ -244,8 +240,12 @@ impl Servers {
             )
             .child(
                 div()
-                    .id("create-morph")
+                    .id("create-dialog")
                     .absolute()
+                    .left(target.origin.x)
+                    .top(target.origin.y)
+                    .w(width)
+                    .h(height)
                     .overflow_hidden()
                     .rounded_lg()
                     .bg(palette.background)
@@ -253,27 +253,15 @@ impl Servers {
                     .border_color(palette.border)
                     .shadow_lg()
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .child(div().size_full().child(modal).with_animation(
-                        ("create-content", usize::from(closing)),
-                        Animation::new(Duration::from_millis(300)),
-                        move |el, p| {
-                            el.opacity(if closing {
-                                (1. - p * 3.).max(0.)
-                            } else {
-                                ((p - 0.35) / 0.65).max(0.)
-                            })
-                        },
-                    ))
+                    .child(div().size_full().child(modal))
                     .with_animation(
-                        ("create-morph-motion", usize::from(closing)),
+                        ("create-dialog-fade", usize::from(closing)),
                         Animation::new(Duration::from_millis(300)).with_easing(ease_out_quint()),
-                        move |el, p| {
-                            let p = if closing { 1. - p } else { p };
-                            el.left(source.origin.x + (target.origin.x - source.origin.x) * p)
-                                .top(source.origin.y + (target.origin.y - source.origin.y) * p)
-                                .w(source.size.width + (target.size.width - source.size.width) * p)
-                                .h(source.size.height
-                                    + (target.size.height - source.size.height) * p)
+                        move |dialog, progress| {
+                            let visibility = if closing { 1. - progress } else { progress };
+                            dialog
+                                .top(target.origin.y + px(10. * (1. - visibility)))
+                                .opacity(visibility)
                         },
                     ),
             )
@@ -410,7 +398,6 @@ impl Render for Servers {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.global::<AppState>().theme_manager.palette();
         let bounds = self.bounds.clone();
-        let button_bounds = self.button_bounds.clone();
         let screen = self
             .selected
             .as_ref()
@@ -530,33 +517,25 @@ impl Render for Servers {
                                             "Create server",
                                             palette,
                                             true,
-                                            self.modal.is_none(),
+                                            true,
                                         )
                                         .relative()
                                         .track_focus(&self.focus)
-                                        .opacity(if self.modal.is_some() { 0. } else { 1. })
                                         .on_click(cx.listener(|this, _, window, cx| {
                                             this.open_create(window, cx)
                                         }))
-                                        .on_key_down(cx.listener(
-                                            |this, event: &gpui::KeyDownEvent, window, cx| {
-                                                if matches!(
-                                                    event.keystroke.key.as_str(),
-                                                    "enter" | "space"
-                                                ) {
-                                                    this.open_create(window, cx);
-                                                    cx.stop_propagation();
-                                                }
-                                            },
-                                        ))
-                                        .child(
-                                            canvas(
-                                                move |bounds, _, _| button_bounds.set(bounds),
-                                                |_, _, _, _| {},
-                                            )
-                                            .absolute()
-                                            .inset_0()
-                                            .size_full(),
+                                        .on_key_down(
+                                            cx.listener(
+                                                |this, event: &gpui::KeyDownEvent, window, cx| {
+                                                    if matches!(
+                                                        event.keystroke.key.as_str(),
+                                                        "enter" | "space"
+                                                    ) {
+                                                        this.open_create(window, cx);
+                                                        cx.stop_propagation();
+                                                    }
+                                                },
+                                            ),
                                         ),
                                     ),
                             )
@@ -694,7 +673,7 @@ impl Render for Servers {
                 }
             })
             .when_some(self.modal.clone(), |root, modal| {
-                root.child(self.morph(modal, cx))
+                root.child(self.create_overlay(modal, cx))
             })
             .when_some(instance_menu, |root, menu| root.child(menu))
             .when_some(delete_overlay, |root, overlay| root.child(overlay))

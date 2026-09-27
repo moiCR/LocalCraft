@@ -20,7 +20,6 @@ pub struct CreateServer {
     pub port: u16,
     pub java: u8,
     pub accepted_eula: bool,
-    pub checksum: Option<String>,
     pub download: JarDownload,
 }
 
@@ -30,14 +29,10 @@ impl CreateServer {
         if !self.accepted_eula {
             bail!("Accept the Minecraft EULA to create this server");
         }
-        let checksum = self
-            .download
-            .sha256
-            .as_ref()
-            .or(self.checksum.as_ref())
-            .context("Supply a trusted SHA256 for this download")?;
-        if checksum.len() != 64 || !checksum.bytes().all(|b| b.is_ascii_hexdigit()) {
-            bail!("SHA256 must contain 64 hexadecimal characters");
+        if self.download.sha256.as_ref().is_some_and(|checksum| {
+            checksum.len() != 64 || !checksum.bytes().all(|b| b.is_ascii_hexdigit())
+        }) {
+            bail!("Provider SHA256 must contain 64 hexadecimal characters");
         }
         Ok(())
     }
@@ -71,7 +66,7 @@ impl CreateServer {
                 .download_resolved(
                     &server,
                     runtime.binary_path(),
-                    self.checksum.as_deref(),
+                    None,
                     progress,
                     &self.download,
                 )
@@ -149,7 +144,7 @@ mod tests {
     use super::*;
     use crate::software::JarKind;
     #[test]
-    fn creation_requires_explicit_eula_and_trusted_checksum() {
+    fn creation_requires_eula_but_allows_missing_checksum() {
         let mut draft = CreateServer {
             name: "Test".into(),
             version: "1.21.4".into(),
@@ -159,7 +154,6 @@ mod tests {
             port: 25565,
             java: 21,
             accepted_eula: false,
-            checksum: None,
             download: JarDownload {
                 url: "https://example.invalid/server.jar".into(),
                 sha256: Some("a".repeat(64)),
@@ -171,10 +165,6 @@ mod tests {
         draft.accepted_eula = true;
         assert!(draft.validate().is_ok());
         draft.download.sha256 = None;
-        assert!(draft.validate().is_err());
-        draft.checksum = Some("bad".into());
-        assert!(draft.validate().is_err());
-        draft.checksum = Some("b".repeat(64));
         assert!(draft.validate().is_ok());
     }
     #[test]

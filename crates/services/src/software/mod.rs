@@ -81,7 +81,7 @@ impl SoftwareService {
     }
 
     /// Run on Tokio. Subscribe before downloading; watch retains the latest progress.
-    /// Supply a trusted SHA256 when the provider does not publish one.
+    /// An expected SHA256 can be supplied when the provider does not publish one.
     pub async fn download(
         &self,
         server: &ServerInstance,
@@ -172,10 +172,7 @@ impl SoftwareService {
         jar: &JarDownload,
         client: &Client,
     ) -> Result<()> {
-        let hash =
-            jar.sha256.as_deref().or(expected_sha256).context(
-                "This provider does not publish SHA256; supply a trusted expected SHA256",
-            )?;
+        let hash = jar.sha256.as_deref().or(expected_sha256);
         if let (Some(published), Some(expected)) = (jar.sha256.as_deref(), expected_sha256)
             && !published.eq_ignore_ascii_case(expected)
         {

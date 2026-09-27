@@ -14,6 +14,7 @@ mod tests;
 
 pub struct ConsoleView {
     console: Console,
+    auto_scroll_setting: bool,
     loading: bool,
     search: Entity<Input>,
     _search_subscription: gpui::Subscription,
@@ -29,7 +30,21 @@ impl ConsoleView {
         mut updates: tokio::sync::watch::Receiver<Arc<ConsoleSnapshot>>,
         cx: &mut Context<Self>,
     ) -> Self {
-        cx.observe_global::<AppState>(|_, cx| cx.notify()).detach();
+        let mut console = Console::default();
+        let auto_scroll_setting = cx.global::<AppState>().preferences.console_auto_scroll;
+        console.follow = auto_scroll_setting;
+        cx.observe_global::<AppState>(|this, cx| {
+            let auto_scroll = cx.global::<AppState>().preferences.console_auto_scroll;
+            if this.auto_scroll_setting != auto_scroll {
+                this.auto_scroll_setting = auto_scroll;
+                this.console.follow = auto_scroll;
+                if auto_scroll {
+                    this.console.follow_tail();
+                }
+            }
+            cx.notify();
+        })
+        .detach();
         let search = cx.new(|cx| Input::new("", "Search console…", cx));
         let search_subscription = cx.subscribe(&search, |this, search, event, cx| {
             if matches!(event, InputEvent::Changed) {
@@ -61,7 +76,8 @@ impl ConsoleView {
             }
         });
         Self {
-            console: Console::default(),
+            console,
+            auto_scroll_setting,
             loading: true,
             search,
             _search_subscription: search_subscription,
@@ -109,6 +125,8 @@ impl Render for ConsoleView {
         #[cfg(test)]
         let rendered_rows = self.rendered_rows.clone();
         let palette = cx.global::<AppState>().theme_manager.palette();
+        let timestamp_color = palette.muted;
+        let show_timestamps = cx.global::<AppState>().preferences.console_timestamps;
         let entity = cx.entity();
         div()
             .flex()
@@ -174,6 +192,11 @@ impl Render for ConsoleView {
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.console.follow = !this.console.follow;
                                         this.console.follow_tail();
+                                        let enabled = this.console.follow;
+                                        cx.update_global::<AppState, _>(|state, _| {
+                                            state.preferences.console_auto_scroll = enabled;
+                                            state.save_preferences();
+                                        });
                                         cx.notify();
                                     })),
                             ),
@@ -218,6 +241,8 @@ impl Render for ConsoleView {
                                         .filter_map(|index| console.console.visible_row(index))
                                         .map(|(id, line)| {
                                             let copy_line = line.text.clone();
+                                            let timestamp =
+                                                console.console.timestamp(*id).map(str::to_owned);
                                             div()
                                                 .id(("console-row", *id))
                                                 .h(px(ROW_HEIGHT))
@@ -230,9 +255,26 @@ impl Render for ConsoleView {
                                                 .font_family("monospace")
                                                 .truncate()
                                                 .child(
-                                                    StyledText::new(line.text.clone())
-                                                        .with_highlights(
-                                                            line.highlights.iter().cloned(),
+                                                    div()
+                                                        .flex()
+                                                        .items_center()
+                                                        .gap_2()
+                                                        .when(show_timestamps, |element| {
+                                                            element.child(
+                                                                div()
+                                                                    .flex_shrink_0()
+                                                                    .text_color(timestamp_color)
+                                                                    .child(
+                                                                        timestamp
+                                                                            .unwrap_or_default(),
+                                                                    ),
+                                                            )
+                                                        })
+                                                        .child(
+                                                            StyledText::new(line.text.clone())
+                                                                .with_highlights(
+                                                                    line.highlights.iter().cloned(),
+                                                                ),
                                                         ),
                                                 )
                                                 .cursor_pointer()

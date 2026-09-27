@@ -26,10 +26,8 @@ pub struct CreateServerModal {
     pub name: Entity<Input>,
     pub ram: Entity<Input>,
     pub port: Entity<Input>,
-    pub checksum: Entity<Input>,
     pub software: Entity<Select>,
     pub version: Entity<Select>,
-    pub build: Entity<Select>,
     pub java: Entity<Select>,
     pub focus: FocusHandle,
     pub accepted_eula: bool,
@@ -37,7 +35,7 @@ pub struct CreateServerModal {
     pub loading: bool,
     pub status: Option<String>,
     pub error: Option<String>,
-    pub builds: Vec<BuildOption>,
+    pub latest_build: Option<BuildOption>,
     pub minimum_java: u8,
     generation: u64,
     _subscriptions: Vec<Subscription>,
@@ -46,36 +44,31 @@ impl EventEmitter<CreationEvent> for CreateServerModal {}
 
 impl CreateServerModal {
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let preferences = cx.global::<AppState>().preferences.clone();
         let name = cx.new(|cx| Input::new("", "My Minecraft server", cx));
-        let ram = cx.new(|cx| Input::new("2048", "MiB", cx));
+        let ram = cx.new(|cx| Input::new(preferences.default_ram_mib.to_string(), "MiB", cx));
         let port = cx.new(|cx| Input::new("25565", "Port", cx));
-        let checksum = cx.new(|cx| Input::new("", "Trusted SHA256 (64 characters)", cx));
         let software = cx.new(|cx| Select::new("Choose software", cx));
         let version = cx.new(|cx| Select::new("Choose a version", cx));
-        let build = cx.new(|cx| Select::new("Choose a build", cx));
         let java = cx.new(|cx| Select::new("Java runtime", cx));
         software.update(cx, |select, cx| {
             select.set_options(SOFTWARE.iter().map(|s| (*s).into()).collect(), cx);
-            select.selected = Some(0);
+            select.selected = SOFTWARE
+                .iter()
+                .position(|software| *software == preferences.default_software);
         });
         let subscriptions = vec![
             cx.subscribe(&software, |this, _, _: &Selected, cx| {
                 this.fetch_versions(cx)
             }),
             cx.subscribe(&version, |this, _, _: &Selected, cx| this.fetch_builds(cx)),
-            cx.subscribe(&build, |this, _, _: &Selected, cx| {
-                this.checksum.update(cx, |input, cx| input.clear(cx));
-                cx.notify();
-            }),
         ];
         let mut modal = Self {
             name,
             ram,
             port,
-            checksum,
             software,
             version,
-            build,
             java,
             focus: cx.focus_handle(),
             accepted_eula: false,
@@ -83,7 +76,7 @@ impl CreateServerModal {
             loading: false,
             status: None,
             error: None,
-            builds: Vec::new(),
+            latest_build: None,
             minimum_java: 8,
             generation: 0,
             _subscriptions: subscriptions,
@@ -99,12 +92,8 @@ impl CreateServerModal {
         let generation = self.generation;
         self.error = None;
         self.loading = true;
-        self.builds.clear();
+        self.latest_build = None;
         self.version.update(cx, |s, cx| {
-            s.set_options(Vec::new(), cx);
-            s.enabled = false;
-        });
-        self.build.update(cx, |s, cx| {
             s.set_options(Vec::new(), cx);
             s.enabled = false;
         });
@@ -156,12 +145,7 @@ impl CreateServerModal {
         let generation = self.generation;
         self.loading = true;
         self.error = None;
-        self.checksum.update(cx, |input, cx| input.clear(cx));
-        self.builds.clear();
-        self.build.update(cx, |s, cx| {
-            s.set_options(Vec::new(), cx);
-            s.enabled = false;
-        });
+        self.latest_build = None;
         self.java.update(cx, |s, cx| {
             s.set_options(Vec::new(), cx);
             s.enabled = false;
@@ -186,14 +170,6 @@ impl CreateServerModal {
                     match result {
                         Ok((java, builds)) => {
                             this.minimum_java = java;
-                            this.build.update(cx, |select, cx| {
-                                select.set_options(
-                                    builds.iter().map(|b| b.label.clone().into()).collect(),
-                                    cx,
-                                );
-                                select.selected = Some(0);
-                                select.enabled = true;
-                            });
                             this.java.update(cx, |select, cx| {
                                 let mut versions = vec![java, 8, 17, 21, 25];
                                 versions.retain(|v| *v >= java);
@@ -203,10 +179,14 @@ impl CreateServerModal {
                                     versions.iter().map(|v| v.to_string().into()).collect(),
                                     cx,
                                 );
-                                select.selected = Some(0);
+                                let preferred_java =
+                                    cx.global::<AppState>().preferences.default_java_major;
+                                select.selected = preferred_java
+                                    .and_then(|version| versions.iter().position(|v| *v == version))
+                                    .or(Some(0));
                                 select.enabled = true;
                             });
-                            this.builds = builds;
+                            this.latest_build = builds.into_iter().next();
                         }
                         Err(error) => this.error = Some(error),
                     }
@@ -217,13 +197,6 @@ impl CreateServerModal {
         .detach();
         cx.notify();
     }
-    pub fn needs_checksum(&self, cx: &gpui::App) -> bool {
-        self.build
-            .read(cx)
-            .selected
-            .and_then(|i| self.builds.get(i))
-            .is_some_and(|b| b.download.sha256.is_none())
-    }
     fn specification(&self, cx: &gpui::App) -> Result<CreateServer, String> {
         let get = |select: &Entity<Select>| {
             select
@@ -233,11 +206,9 @@ impl CreateServerModal {
                 .ok_or("Complete all selections".to_owned())
         };
         let chosen = self
-            .build
-            .read(cx)
-            .selected
-            .and_then(|i| self.builds.get(i))
-            .ok_or("Choose a build")?;
+            .latest_build
+            .as_ref()
+            .ok_or("No stable build is available")?;
         let specification = CreateServer {
             name: self.name.read(cx).value().trim().to_owned(),
             version: get(&self.version)?,
@@ -259,8 +230,6 @@ impl CreateServerModal {
                 .parse()
                 .map_err(|_| "Choose a Java runtime")?,
             accepted_eula: self.accepted_eula,
-            checksum: Some(self.checksum.read(cx).value().trim().to_owned())
-                .filter(|s| !s.is_empty()),
             download: chosen.download.clone(),
         };
         specification.validate().map_err(|e| e.to_string())?;
@@ -291,7 +260,7 @@ impl CreateServerModal {
             return;
         }
         self.busy = true;
-        for input in [&self.name, &self.ram, &self.port, &self.checksum] {
+        for input in [&self.name, &self.ram, &self.port] {
             input.update(cx, |input, cx| {
                 input.enabled = false;
                 cx.notify();
@@ -299,7 +268,7 @@ impl CreateServerModal {
         }
         self.error = None;
         self.status = Some("Preparing server…".into());
-        for select in [&self.software, &self.version, &self.build, &self.java] {
+        for select in [&self.software, &self.version, &self.java] {
             select.update(cx, |s, cx| {
                 s.enabled = false;
                 cx.notify();
@@ -341,9 +310,7 @@ impl CreateServerModal {
                             Update::Done(result) => {
                                 this.busy = false;
                                 this.status = None;
-                                for select in
-                                    [&this.software, &this.version, &this.build, &this.java]
-                                {
+                                for select in [&this.software, &this.version, &this.java] {
                                     select.update(cx, |s, cx| {
                                         s.enabled = true;
                                         cx.notify();
