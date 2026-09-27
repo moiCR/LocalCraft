@@ -17,5 +17,5 @@ Its goal is to provide developers, server administrators, and Minecraft enthusia
 ## Features
 
 ## Special Thanks
-[Zed](https://github.com/zed-industries/zed): for creating gpui and making it open source
-[Mojang](https://www.minecraft.net/es-es): for creating the best game ever.
+- [Zed](https://github.com/zed-industries/zed): for creating gpui and making it open source
+- [Mojang](https://www.minecraft.net/es-es): for creating the best game ever.
