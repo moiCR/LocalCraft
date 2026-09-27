@@ -14,6 +14,8 @@ Its goal is to provide developers, server administrators, and Minecraft enthusia
 
 ## Showcase
 
+https://github.com/user-attachments/assets/95fbb24a-d283-4c30-9ce6-c145589e7c9d
+
 ## Features
 
 ## Special Thanks

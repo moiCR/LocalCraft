@@ -2,6 +2,24 @@
 name = "LocalCraft"
 version = "0.1.0"
 edition = "2024"
+description = "A native desktop manager for local Minecraft servers."
+authors = ["moiCR"]
+homepage = "https://github.com/moiCR/LocalCraft"
+repository = "https://github.com/moiCR/LocalCraft"
+
+[package.metadata.packager]
+product-name = "LocalCraft"
+identifier = "com.moiCR.LocalCraft"
+publisher = "moiCR"
+out-dir = "../../target/packager"
+icons = ["../../target/packager/windows-assets/localcraft.ico"]
+resources = [{ src = "../../target/packager/windows-assets/vcruntime140.dll", target = "vcruntime140.dll" }]
+before-packaging-command = "powershell -NoProfile -ExecutionPolicy Bypass -File ../../packaging/windows/prepare.ps1"
+
+[package.metadata.packager.nsis]
+installer-icon = "../../target/packager/windows-assets/localcraft.ico"
+installMode = "currentUser"
+compression = "lzma"
 
 [[bin]]
 name = "LocalCraft"
