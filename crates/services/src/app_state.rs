@@ -3,7 +3,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use ui::theme::manager::ThemeManager;
 
-use crate::{instance::InstancesService, java::JavaService, software::SoftwareService};
+use crate::{
+    instance::InstancesService, java::JavaService, playit::PlayitService, software::SoftwareService,
+};
 
 pub struct AppState {
     pub theme_manager: ThemeManager,
@@ -11,6 +13,7 @@ pub struct AppState {
     pub java_service: Arc<JavaService>,
     pub background_runtime: tokio::runtime::Handle,
     pub software_service: SoftwareService,
+    pub playit_service: Arc<PlayitService>,
 }
 
 impl gpui::Global for AppState {}
@@ -27,6 +30,7 @@ impl AppState {
             java_service,
             background_runtime,
             software_service: SoftwareService::new(),
+            playit_service: Arc::new(PlayitService::new()),
         })
     }
 }

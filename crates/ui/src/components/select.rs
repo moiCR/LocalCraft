@@ -11,6 +11,7 @@ pub struct Select {
     pub placeholder: SharedString,
     open: bool,
     menu_bounds: Rc<Cell<gpui::Bounds<gpui::Pixels>>>,
+    menu_scroll: gpui::ScrollHandle,
     focus: FocusHandle,
 }
 
@@ -25,6 +26,7 @@ impl Select {
             placeholder: placeholder.to_owned().into(),
             open: false,
             menu_bounds: Rc::default(),
+            menu_scroll: gpui::ScrollHandle::new(),
             focus: cx.focus_handle().tab_index(0),
         }
     }
@@ -57,6 +59,7 @@ impl Focusable for Select {
 impl Render for Select {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let menu_bounds = self.menu_bounds.clone();
+        let menu_scroll = self.menu_scroll.clone();
         let text_color = window.text_style().color;
         let dark = text_color.l > 0.5;
         let background = if dark {
@@ -94,9 +97,9 @@ impl Render for Select {
                     "tab" => {
                         this.open = false;
                         if event.keystroke.modifiers.shift {
-                            window.focus_prev();
+                            window.focus_prev(cx);
                         } else {
-                            window.focus_next();
+                            window.focus_next(cx);
                         }
                         cx.notify();
                     }
@@ -125,7 +128,7 @@ impl Render for Select {
                     .when(self.enabled, |element| element.cursor_pointer())
                     .on_click(cx.listener(|this, _, window, cx| {
                         if this.enabled {
-                            window.focus(&this.focus);
+                            window.focus(&this.focus, cx);
                             this.open = !this.open;
                             cx.notify();
                         }
@@ -148,8 +151,7 @@ impl Render for Select {
                             .left_0()
                             .w_full()
                             .mt_1()
-                            .max_h(px(180.))
-                            .overflow_y_scroll()
+                            .max_h(px(240.))
                             .bg(background)
                             .text_color(text_color)
                             .border_1()
@@ -166,18 +168,28 @@ impl Render for Select {
                                 .inset_0()
                                 .size_full(),
                             )
-                            .children(self.options.iter().enumerate().map(|(index, option)| {
+                            .child(
                                 div()
-                                    .id(option.clone())
-                                    .px_3()
-                                    .py_2()
-                                    .cursor_pointer()
-                                    .hover(|style| style.bg(rgba(0x88888830)))
-                                    .on_click(
-                                        cx.listener(move |this, _, _, cx| this.choose(index, cx)),
-                                    )
-                                    .child(option.clone())
-                            })),
+                                    .id("select-menu-options")
+                                    .max_h(px(240.))
+                                    .overflow_y_scroll()
+                                    .scrollbar_width(px(8.))
+                                    .track_scroll(&menu_scroll)
+                                    .children(self.options.iter().enumerate().map(
+                                        |(index, option)| {
+                                            div()
+                                                .id(option.clone())
+                                                .px_3()
+                                                .py_2()
+                                                .cursor_pointer()
+                                                .hover(|style| style.bg(rgba(0x88888830)))
+                                                .on_click(cx.listener(move |this, _, _, cx| {
+                                                    this.choose(index, cx)
+                                                }))
+                                                .child(option.clone())
+                                        },
+                                    )),
+                            ),
                     )
                     .with_priority(10),
                 )

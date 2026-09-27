@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use gpui::{
     Animation, AnimationExt, Context, IntoElement, MouseButton, div, ease_out_quint, prelude::*,
-    px, rgba,
+    px, rgba, svg,
 };
 use services::AppState;
 
@@ -48,13 +48,13 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                     match event.keystroke.key.as_str() {
                         "escape" => this.close_settings(window, cx),
                         "left" | "right" => {
-                            cx.update_global::<AppState, _>(|state, _| {
+                            cx.update_global::<AppState, _>(|state, cx| {
                                 use ui::theme::Appearance;
                                 let appearance = match state.theme_manager.appearance() {
                                     Appearance::Dark => Appearance::Light,
                                     Appearance::Light => Appearance::Dark,
                                 };
-                                state.theme_manager.set_appearance(appearance);
+                                appearance::set_app_appearance(state, cx, appearance);
                             });
                         }
                         _ => {}
@@ -93,7 +93,7 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.close_settings(window, cx)
                                 }))
-                                .child("×"),
+                                .child(svg().path("icons/close.svg").size_4()),
                         ),
                 )
                 .child(

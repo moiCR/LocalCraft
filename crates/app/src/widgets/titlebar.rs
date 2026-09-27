@@ -1,7 +1,7 @@
 use crate::workspace::Workspace;
 use gpui::{
-    App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge, Window, div, prelude::*, px,
-    rgb, svg,
+    App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge, Window, WindowControlArea,
+    div, prelude::*, px, rgb, svg,
 };
 use gpui_router::RouterState;
 use services::AppState;
@@ -73,31 +73,36 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                     })),
                 ),
         )
-        .child(
-            div()
+        .child({
+            let drag_area = div()
                 .id("window-drag-area")
+                .window_control_area(WindowControlArea::Drag)
                 .flex_1()
                 .h_full()
                 .flex()
                 .items_center()
                 .px_4()
                 .text_xs()
-                .text_color(palette.muted)
-                .on_mouse_down(MouseButton::Left, |event, window, _| {
-                    if event.click_count == 2 {
-                        window.zoom_window();
-                    } else {
-                        window.start_window_move();
-                    }
+                .text_color(palette.muted);
+            drag_area
+                .when(!cfg!(target_os = "windows"), |element| {
+                    element.on_mouse_down(MouseButton::Left, |event, window, _| {
+                        if event.click_count == 2 {
+                            window.zoom_window();
+                        } else {
+                            window.start_window_move();
+                        }
+                    })
                 })
                 .on_mouse_down(MouseButton::Right, |event, window, _| {
                     window.show_window_menu(event.position);
-                }),
-        )
+                })
+        })
         .child(control(
             "window-minimize",
             "icons/minimize.svg",
             palette,
+            Some(WindowControlArea::Min),
             false,
             |window, _| window.minimize_window(),
         ))
@@ -109,6 +114,7 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                 "icons/maximize.svg"
             },
             palette,
+            Some(WindowControlArea::Max),
             false,
             |window, _| window.zoom_window(),
         ))
@@ -116,6 +122,7 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
             "window-close",
             "icons/close.svg",
             palette,
+            None,
             true,
             |window, _| window.remove_window(),
         ))
@@ -147,6 +154,7 @@ fn control(
     id: &'static str,
     icon: &'static str,
     palette: &Palette,
+    window_control: Option<WindowControlArea>,
     close: bool,
     action: impl Fn(&mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
@@ -164,7 +172,13 @@ fn control(
         .justify_center()
         .cursor_pointer()
         .hover(move |style| style.bg(hover))
-        .on_click(move |_, window, cx| action(window, cx))
+        .when_some(window_control, |element, area| {
+            element.window_control_area(area)
+        })
+        .when(
+            !cfg!(target_os = "windows") || window_control.is_none(),
+            |element| element.on_click(move |_, window, cx| action(window, cx)),
+        )
         .child(svg().path(icon).size_4().text_color(palette.text))
 }
 

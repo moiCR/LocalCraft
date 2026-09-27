@@ -44,6 +44,7 @@ fn initialize(cx: &mut TestAppContext) -> anyhow::Result<tokio::runtime::Runtime
         java_service: Arc::new(JavaService::new()),
         background_runtime: runtime.handle().clone(),
         software_service: SoftwareService::new(),
+        playit_service: Arc::new(services::playit::PlayitService::new()),
     });
     Ok(runtime)
 }
@@ -64,7 +65,7 @@ fn snapshot(count: usize) -> Arc<ConsoleSnapshot> {
 
 fn draw(cx: &mut VisualTestContext) {
     cx.run_until_parked();
-    cx.update(|window, cx| window.draw(cx).clear());
+    cx.update(|window, cx| window.draw(cx).clear(cx));
 }
 
 #[gpui::test]

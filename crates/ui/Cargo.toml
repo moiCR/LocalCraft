@@ -8,5 +8,5 @@ name = "ui"
 path = "src/ui.rs"
 
 [dependencies]
-gpui.workspace = true
+gpui-pre.workspace = true
 unicode-segmentation = "1"

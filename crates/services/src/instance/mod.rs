@@ -1,6 +1,7 @@
 mod ansi;
 pub mod configuration;
 pub mod console;
+pub mod files;
 pub mod server_instance;
 mod supervisor;
 
@@ -71,6 +72,10 @@ impl InstancesService {
         } else {
             self.servers.push(server);
         }
+    }
+
+    pub fn remove(&mut self, id: &str) {
+        self.servers.retain(|server| server.id != id);
     }
 
     pub async fn new() -> Result<Self> {

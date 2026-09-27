@@ -31,6 +31,7 @@ actions!(
 
 pub struct Input {
     pub enabled: bool,
+    borderless: bool,
     horizontal_offset: Pixels,
     focus_handle: FocusHandle,
     content: SharedString,
@@ -79,6 +80,7 @@ impl Input {
     ) -> Self {
         Self {
             enabled: true,
+            borderless: false,
             horizontal_offset: px(0.),
             focus_handle: cx.focus_handle().tab_index(0),
             content: value.into(),
@@ -90,6 +92,11 @@ impl Input {
             last_bounds: None,
             is_selecting: false,
         }
+    }
+
+    pub fn borderless(mut self) -> Self {
+        self.borderless = true;
+        self
     }
     pub fn value(&self) -> &str {
         &self.content
@@ -159,7 +166,7 @@ impl Input {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        window.focus(&self.focus_handle);
+        window.focus(&self.focus_handle, cx);
         cx.stop_propagation();
         self.is_selecting = true;
 
@@ -654,6 +661,8 @@ impl Element for TextElement {
         if let Err(error) = line.paint(
             point(bounds.origin.x - prepaint.offset, bounds.origin.y),
             window.line_height(),
+            gpui::TextAlign::Left,
+            None,
             window,
             cx,
         ) {
@@ -702,9 +711,9 @@ impl Render for Input {
             .on_key_down(|event, window, cx| {
                 if event.keystroke.key == "tab" {
                     if event.keystroke.modifiers.shift {
-                        window.focus_prev();
+                        window.focus_prev(cx);
                     } else {
-                        window.focus_next();
+                        window.focus_next(cx);
                     }
                     cx.stop_propagation();
                 }
@@ -712,18 +721,20 @@ impl Render for Input {
             .w_full()
             .min_w_0()
             .opacity(if self.enabled { 1. } else { 0.5 })
-            .border_1()
-            .border_color(rgba(0x88888855))
-            .rounded_md()
-            .focus(|style| style.border_color(rgba(0x888888ff)))
+            .when(!self.borderless, |element| {
+                element
+                    .border_1()
+                    .border_color(rgba(0x88888855))
+                    .rounded_md()
+                    .focus(|style| style.border_color(rgba(0x888888ff)))
+            })
             .line_height(px(22.))
             .text_size(px(14.))
             .child(
                 div()
-                    .h(px(38.))
+                    .when(self.borderless, |element| element.h(px(30.)).px_0().py_1())
+                    .when(!self.borderless, |element| element.h(px(38.)).px_3().py_2())
                     .w_full()
-                    .px_3()
-                    .py_2()
                     .overflow_hidden()
                     .child(TextElement { input: cx.entity() }),
             )

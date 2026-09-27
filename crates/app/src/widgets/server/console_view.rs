@@ -73,7 +73,7 @@ impl ConsoleView {
         }
     }
 
-    pub fn cached(view: Entity<Self>) -> AnyView {
+    pub fn cached(view: Entity<Self>) -> impl IntoElement {
         AnyView::from(view).cached(
             StyleRefinement::default()
                 .flex_1()
@@ -252,7 +252,7 @@ impl Render for ConsoleView {
                             .absolute()
                             .inset_0()
                             .size_full()
-                            .track_scroll(self.console.scroll.clone())
+                            .track_scroll(&self.console.scroll)
                             .on_scroll_wheel(cx.listener(
                                 |this, _, _, _| {
                                     this.console.pause_follow();

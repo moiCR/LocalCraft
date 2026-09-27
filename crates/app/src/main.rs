@@ -4,9 +4,7 @@ mod views;
 mod widgets;
 mod workspace;
 
-use gpui::{
-    App, AppContext, Application, BorrowAppContext, Bounds, WindowBounds, WindowOptions, px, size,
-};
+use gpui::{App, AppContext, BorrowAppContext, Bounds, WindowBounds, WindowOptions, px, size};
 use gpui_router::{RouterState, init as router_init};
 use workspace::Workspace;
 
@@ -27,7 +25,7 @@ fn main() {
     };
     let shutdown = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let shutdown_capture = shutdown.clone();
-    Application::new()
+    gpui_kit::application()
         .with_assets(assets::Assets)
         .run(move |cx: &mut App| {
             cx.set_global(state);
@@ -35,6 +33,12 @@ fn main() {
             cx.update_global::<RouterState, _>(|router, _| {
                 router.with_path("/instances".into());
             });
+            gpui_kit::init(cx);
+            gpui_kit::component::theme::Theme::change(
+                gpui_kit::component::theme::ThemeMode::Dark,
+                None,
+                cx,
+            );
             ui::components::input::init(cx);
             cx.on_app_quit(move |cx| {
                 let mut servers = shutdown_capture
@@ -70,7 +74,7 @@ fn main() {
                 cx.quit();
                 return;
             }
-            cx.on_window_closed(|cx| {
+            cx.on_window_closed(|cx, _window_id| {
                 if cx.windows().is_empty() {
                     cx.quit();
                 }

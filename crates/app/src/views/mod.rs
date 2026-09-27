@@ -1,4 +1,5 @@
 pub mod instances;
+pub mod playit;
 pub mod runtimes;
 pub mod servers;
 

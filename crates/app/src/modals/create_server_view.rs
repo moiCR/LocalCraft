@@ -1,5 +1,5 @@
 use super::create_server::CreateServerModal;
-use gpui::{Context, IntoElement, MouseButton, Render, Window, div, prelude::*, px};
+use gpui::{Context, IntoElement, MouseButton, Render, Window, div, prelude::*, px, svg};
 use services::AppState;
 use ui::components::{button::button, input::Input, select};
 
@@ -26,7 +26,8 @@ impl Render for CreateServerModal {
             .child(div().flex().items_center().justify_between().p_6().border_b_1().border_color(palette.border)
                 .child(div().flex().flex_col().gap_1().child(div().text_lg().child("Create server"))
                     .child(div().text_color(palette.muted).child("Your next world starts here.")))
-                .child(button("dismiss-create", "×", palette, false, !self.busy)
+                .child(button("dismiss-create", "", palette, false, !self.busy)
+                    .child(svg().path("icons/close.svg").size_4())
                     .on_click(cx.listener(|this, _, _, cx| this.close(cx)))))
             .child(div().id("create-server-fields").flex_1().min_h_0().overflow_y_scroll().p_6().flex().flex_col().gap_4()
                 .child(input_field("Name", &self.name))

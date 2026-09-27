@@ -1,6 +1,15 @@
-use gpui::{Context, IntoElement, div, prelude::*, svg};
+use gpui::{App, Context, IntoElement, div, prelude::*, svg};
 use services::AppState;
 use ui::theme::Appearance;
+
+pub fn set_app_appearance(state: &mut AppState, cx: &mut App, appearance: Appearance) {
+    state.theme_manager.set_appearance(appearance);
+    let mode = match appearance {
+        Appearance::Dark => gpui_kit::component::theme::ThemeMode::Dark,
+        Appearance::Light => gpui_kit::component::theme::ThemeMode::Light,
+    };
+    gpui_kit::component::theme::Theme::change(mode, None, cx);
+}
 
 use crate::workspace::Workspace;
 
@@ -53,8 +62,8 @@ pub fn render(cx: &Context<Workspace>) -> impl IntoElement {
                         .cursor_pointer()
                         .hover(|style| style.border_color(palette.text))
                         .on_click(move |_, _, cx| {
-                            cx.update_global::<AppState, _>(|state, _| {
-                                state.theme_manager.set_appearance(appearance);
+                            cx.update_global::<AppState, _>(|state, cx| {
+                                set_app_appearance(state, cx, appearance);
                             });
                         })
                         .child(

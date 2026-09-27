@@ -77,6 +77,7 @@ fn render(cx: &Context<Workspace>) -> gpui::Div {
                         "icons/server.svg",
                     ),
                     (Page::Runtimes, "Runtimes", "runtimes", "icons/coffee.svg"),
+                    (Page::Playit, "Playit", "playit", "icons/computer.svg"),
                 ]
                 .into_iter()
                 .map(|(page, label, id, icon)| {

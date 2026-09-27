@@ -1,11 +1,12 @@
 use gpui::{
-    Animation, AnimationExt, Context, Div, IntoElement, Render, Timer, Window, div, ease_out_quint,
+    Animation, AnimationExt, Context, Div, IntoElement, Render, Window, div, ease_out_quint,
     prelude::*,
 };
 use services::{
     AppState,
     java::{JavaProgress, JavaStage},
 };
+use smol::Timer;
 use std::{path::PathBuf, process::Stdio, time::Duration};
 use tokio::sync::watch;
 

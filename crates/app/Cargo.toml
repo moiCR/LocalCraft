@@ -1,16 +1,18 @@
 [package]
-name = "localcraft"
+name = "LocalCraft"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "localcraft"
+name = "LocalCraft"
 path = "src/main.rs"
 
 [dependencies]
-gpui.workspace = true
+gpui-pre.workspace = true
 gpui-router.workspace = true
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", package = "gpui-kit" }
 tokio.workspace = true
+smol.workspace = true
 serde.workspace = true
 
 ui.workspace = true
@@ -21,4 +23,9 @@ services.workspace = true
 anyhow.workspace = true
 
 [dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
+gpui = { package = "gpui-pre", version = "0.3.6", features = ["test-support"] }
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", package = "gpui-kit", features = ["test-support"] }
+
+[build-dependencies]
+resvg = "0.46.0"
+winres = "0.1.12"

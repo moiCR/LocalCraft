@@ -112,6 +112,28 @@ impl ServerInstance {
         .await
     }
 
+    pub async fn delete(&self) -> Result<()> {
+        self.validate()?;
+        self.stop(Duration::from_secs(30)).await?;
+        Self::delete_in(&InstancesService::directory()?, &self.id).await
+    }
+
+    async fn delete_in(root: &Path, id: &str) -> Result<()> {
+        Uuid::parse_str(id).context("Invalid instance ID")?;
+        let directory = root.join(id);
+        let metadata = match fs::symlink_metadata(&directory).await {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error).context("Could not inspect instance directory"),
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            bail!("Instance path is not a regular directory");
+        }
+        fs::remove_dir_all(&directory)
+            .await
+            .context("Could not delete instance files")
+    }
+
     /// Call only after the user accepts the Minecraft EULA.
     pub async fn accept_eula(&self) -> Result<()> {
         atomic_write(&self.directory()?.join("eula.txt"), b"eula=true\n").await
@@ -310,6 +332,28 @@ mod tests {
             "eula=false\n"
         );
         assert!(!instance.is_running().await);
+        fs::remove_dir_all(root).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delete_removes_only_the_instance_directory() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("localcraft-delete-test-{}", Uuid::new_v4()));
+        let instance = ServerInstance::create_in(
+            &root,
+            "Delete test".into(),
+            "1.21".into(),
+            "Paper".into(),
+            "1024".into(),
+            None,
+        )
+        .await?;
+        let instance_directory = root.join(&instance.id);
+
+        ServerInstance::delete_in(&root, &instance.id).await?;
+
+        assert!(!fs::try_exists(instance_directory).await?);
+        assert!(fs::try_exists(&root).await?);
         fs::remove_dir_all(root).await?;
         Ok(())
     }

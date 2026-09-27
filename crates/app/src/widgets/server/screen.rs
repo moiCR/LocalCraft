@@ -1,4 +1,6 @@
 use super::console_view::ConsoleView;
+use super::files_view::FilesView;
+use super::logs_view::LogsView;
 use crate::modals::server_settings::{ServerSettings, SettingsEvent};
 use gpui::BorrowAppContext;
 use gpui::{AppContext, Context, Entity, EventEmitter, Subscription};
@@ -15,6 +17,14 @@ pub enum Operation {
     Stop,
     Restart,
 }
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ServerSection {
+    Console,
+    Logs,
+    Files,
+}
+
 pub struct Back;
 impl EventEmitter<Back> for ServerScreen {}
 
@@ -26,6 +36,9 @@ enum Update {
 pub struct ServerScreen {
     pub server: ServerInstance,
     pub console: Entity<ConsoleView>,
+    pub logs: Entity<LogsView>,
+    pub files: Entity<FilesView>,
+    pub section: ServerSection,
     pub running: bool,
     pub busy: bool,
     pub status: Option<String>,
@@ -38,6 +51,8 @@ impl ServerScreen {
     pub fn new(server: ServerInstance, cx: &mut Context<Self>) -> Self {
         let command = cx.new(|cx| Input::new("", "Type a command…", cx));
         let console = cx.new(|cx| ConsoleView::new(server.subscribe_console(), cx));
+        let logs = cx.new(|_| LogsView::new(server.clone()));
+        let files = cx.new(|cx| FilesView::new(server.clone(), cx));
         let subscription = cx.subscribe(&command, |this, _, event, cx| {
             if matches!(event, InputEvent::Submitted) {
                 this.send_command(cx);
@@ -99,6 +114,9 @@ impl ServerScreen {
         Self {
             server,
             console,
+            logs,
+            files,
+            section: ServerSection::Console,
             running: false,
             busy: false,
             status: None,
@@ -113,6 +131,20 @@ impl ServerScreen {
         let snapshot = self.server.console();
         self.console
             .update(cx, |console, cx| console.set_snapshot(&snapshot, cx));
+    }
+
+    pub fn change_section(&mut self, section: ServerSection, cx: &mut Context<Self>) {
+        if self.section == section {
+            return;
+        }
+        self.section = section;
+        if section == ServerSection::Logs {
+            self.logs.update(cx, |logs, cx| logs.refresh(cx));
+        }
+        if section == ServerSection::Files {
+            self.files.update(cx, |files, cx| files.refresh(cx));
+        }
+        cx.notify();
     }
 
     pub fn operate(&mut self, operation: Operation, cx: &mut Context<Self>) {
@@ -227,7 +259,8 @@ impl ServerScreen {
             return;
         }
         let settings = cx.new(|cx| ServerSettings::new(&self.server, self.running, cx));
-        window.focus(&settings.read(cx).focus);
+        let focus = settings.read(cx).focus.clone();
+        window.focus(&focus, cx);
         self.settings_subscription = Some(cx.subscribe(&settings, |this, _, event, cx| {
             match event {
                 SettingsEvent::Saved(server) => {

@@ -15,6 +15,7 @@ pub enum Page {
     #[default]
     Instances,
     Runtimes,
+    Playit,
 }
 
 impl Page {
@@ -22,6 +23,7 @@ impl Page {
         match self {
             Self::Instances => "/instances",
             Self::Runtimes => "/runtimes",
+            Self::Playit => "/playit",
         }
     }
 }
@@ -29,6 +31,7 @@ impl Page {
 pub struct Workspace {
     pub servers: gpui::Entity<views::servers::Servers>,
     pub runtimes: gpui::Entity<views::runtimes::Runtimes>,
+    pub playit: gpui::Entity<views::playit::Playit>,
     pub navigation: crate::shell::Navigation,
     pub sidebar_motion: crate::shell::SidebarMotion,
     pub settings_open: bool,
@@ -42,6 +45,7 @@ impl Workspace {
         Self {
             servers: cx.new(views::servers::Servers::new),
             runtimes: cx.new(views::runtimes::Runtimes::new),
+            playit: cx.new(views::playit::Playit::new),
             navigation: crate::shell::Navigation::default(),
             sidebar_motion: crate::shell::SidebarMotion::default(),
             settings_open: false,
@@ -53,16 +57,16 @@ impl Workspace {
     pub fn open_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.previous_focus = window.focused(cx);
         self.settings_open = true;
-        window.focus(&self.settings_focus);
+        window.focus(&self.settings_focus, cx);
         cx.notify();
     }
 
     pub fn close_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.settings_open = false;
         if let Some(focus) = self.previous_focus.take() {
-            window.focus(&focus);
+            window.focus(&focus, cx);
         } else {
-            window.blur();
+            window.blur(cx);
         }
         cx.notify();
     }
@@ -71,19 +75,19 @@ impl Workspace {
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.global::<AppState>().theme_manager.palette();
-        let route_animation = if cx
+        let route_path = cx
             .global::<gpui_router::RouterState>()
             .location
             .pathname
-            .as_ref()
-            == "/runtimes"
-        {
-            "runtimes"
-        } else {
-            "instances"
+            .clone();
+        let route_animation = match route_path.as_ref() {
+            "/runtimes" => "runtimes",
+            "/playit" => "playit",
+            _ => "instances",
         };
         let servers = self.servers.clone();
         let runtimes = self.runtimes.clone();
+        let playit = self.playit.clone();
         let routes = Routes::new()
             .basename("/")
             .child(Route::new().index().element({
@@ -98,6 +102,11 @@ impl Render for Workspace {
                 Route::new()
                     .path("runtimes")
                     .element(move |_, _| runtimes.clone()),
+            )
+            .child(
+                Route::new()
+                    .path("playit")
+                    .element(move |_, _| playit.clone()),
             )
             .child(Route::new().path("{*not_found}").element({
                 let servers = servers.clone();
