@@ -22,6 +22,7 @@ installMode = "currentUser"
 compression = "lzma"
 
 [package.metadata.generate-rpm]
+license = "Unknown"
 assets = [
     { source = "../../target/release/LocalCraft", dest = "/usr/bin/LocalCraft", mode = "755" },
     { source = "../../packaging/linux/localcraft.desktop", dest = "/usr/share/applications/LocalCraft.desktop", mode = "644" },
