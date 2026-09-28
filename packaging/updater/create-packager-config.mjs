@@ -22,7 +22,8 @@ const config = {
   homepage: "https://github.com/moiCR/LocalCraft",
   authors: ["moiCR"],
   outDir: "packager",
-  binaries: [{ path: "../release/LocalCraft", main: true }],
+  binariesDir: "packager-input",
+  binaries: [{ path: "LocalCraft", main: true }],
   formats: windows ? ["nsis"] : ["appimage", "deb"],
   icons: windows
     ? ["packager/windows-assets/localcraft.ico"]

@@ -12,14 +12,32 @@ try {
         throw 'Could not build the LocalCraft release executable.'
     }
 
-    $iconBuild = $buildMessages |
-        ForEach-Object { ConvertFrom-Json -InputObject $_ } |
+    $buildEvents = $buildMessages |
+        ForEach-Object { ConvertFrom-Json -InputObject $_ }
+    $iconBuild = $buildEvents |
         Where-Object {
             $_.reason -eq 'build-script-executed' -and $_.package_id -match '#LocalCraft@'
         } |
         Select-Object -Last 1
     if ($null -eq $iconBuild) {
         throw 'Could not locate the LocalCraft icon build output.'
+    }
+    $applicationBuild = $buildEvents |
+        Where-Object {
+            if ($_.reason -ne 'compiler-artifact') {
+                return $false
+            }
+            $target = $_.PSObject.Properties['target']
+            $executable = $_.PSObject.Properties['executable']
+            if ($null -eq $target -or $null -eq $executable) {
+                return $false
+            }
+            return $target.Value.name -eq 'LocalCraft' -and
+                -not [string]::IsNullOrEmpty([string]$executable.Value)
+        } |
+        Select-Object -Last 1
+    if ($null -eq $applicationBuild) {
+        throw 'Could not locate the LocalCraft release executable.'
     }
 
     $toolchainInfo = & rustc -vV
@@ -61,7 +79,10 @@ try {
     New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $iconBuild.out_dir 'localcraft.ico') -Destination (Join-Path $assetsDir 'localcraft.ico')
     Copy-Item -LiteralPath $runtimePath -Destination (Join-Path $assetsDir 'vcruntime140.dll')
-    Write-Host "Prepared the Windows installer icon and $runtimeArch Visual C++ runtime."
+    $binaryDir = Join-Path $workspaceRoot 'target\packager-input'
+    New-Item -ItemType Directory -Path $binaryDir -Force | Out-Null
+    Copy-Item -LiteralPath $applicationBuild.executable -Destination (Join-Path $binaryDir 'LocalCraft.exe') -Force
+    Write-Host "Prepared the Windows installer binary, icon, and $runtimeArch Visual C++ runtime."
 }
 finally {
     Pop-Location

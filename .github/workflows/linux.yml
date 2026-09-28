@@ -86,6 +86,9 @@ jobs:
           icon="$(find target/release/build -path '*/out/localcraft.png' -type f -print -quit)"
           test -n "$icon"
           cp "$icon" target/packager/linux-assets/localcraft.png
+          test -s target/release/LocalCraft
+          mkdir -p target/packager-input
+          cp target/release/LocalCraft target/packager-input/LocalCraft
           node packaging/updater/create-packager-config.mjs linux target/packager-linux.json
           cargo packager --release --config target/packager-linux.json
 
