@@ -15,6 +15,7 @@ use uuid::Uuid;
 use super::{
     InstancesService, RunningServer, ServerEvent, ServerInstance, event_channel, supervisor,
 };
+use crate::software::pumpkin;
 
 impl ServerInstance {
     pub async fn create(
@@ -65,7 +66,9 @@ impl ServerInstance {
             .await
             .context("Could not create instance directory")?;
         let result = async {
-            atomic_write(&dir.join("eula.txt"), b"eula=false\n").await?;
+            if !pumpkin::is_pumpkin(&instance.software) {
+                atomic_write(&dir.join("eula.txt"), b"eula=false\n").await?;
+            }
             atomic_write(
                 &dir.join("config.json"),
                 &serde_json::to_vec_pretty(&instance)?,
@@ -139,9 +142,12 @@ impl ServerInstance {
         atomic_write(&self.directory()?.join("eula.txt"), b"eula=true\n").await
     }
 
-    /// Java is an explicit executable path; java_version is metadata, not a path.
-    /// SoftwareService must install the server jar or Forge launcher before starting.
-    pub async fn start(&self, java: &Path) -> Result<()> {
+    pub async fn start(&self) -> Result<()> {
+        let directory = self.directory()?;
+        self.start_in(&directory).await
+    }
+
+    async fn start_in(&self, dir: &Path) -> Result<()> {
         let mut running = self.running.lock().await;
         if running
             .as_ref()
@@ -150,45 +156,67 @@ impl ServerInstance {
             bail!("Server is already running");
         }
 
-        let dir = self.directory()?;
-        let eula = fs::read_to_string(dir.join("eula.txt"))
-            .await
-            .context("Could not read EULA acceptance")?;
-
-        if !eula.lines().any(|line| line.trim() == "eula=true") {
-            bail!("Accept the Minecraft EULA before starting the server");
-        }
-
-        let arguments = if self.software.eq_ignore_ascii_case("forge") {
-            crate::software::forge::launch_arguments(&dir).await?
-        } else {
-            if !fs::metadata(dir.join("server.jar"))
+        let native = pumpkin::is_pumpkin(&self.software);
+        let (executable, arguments) = if native {
+            let executable = dir.join(pumpkin::executable_name());
+            if !fs::metadata(&executable)
                 .await
-                .context("Install server.jar before starting the server")?
+                .context("Install Pumpkin before starting the server")?
                 .is_file()
             {
-                bail!("server.jar must be a regular file");
+                bail!("Pumpkin server executable must be a regular file");
             }
-            vec![
-                std::ffi::OsString::from("-jar"),
-                "server.jar".into(),
-                "nogui".into(),
-            ]
-        };
-        let java = fs::canonicalize(java)
-            .await
-            .context("Could not resolve Java executable")?;
+            (
+                fs::canonicalize(executable)
+                    .await
+                    .context("Could not resolve Pumpkin executable")?,
+                Vec::new(),
+            )
+        } else {
+            let eula = fs::read_to_string(dir.join("eula.txt"))
+                .await
+                .context("Could not read EULA acceptance")?;
 
-        let mut child = tokio::process::Command::new(java)
-            .current_dir(&dir)
-            .arg(format!("-Xmx{}M", self.ram))
-            .args(arguments)
+            if !eula.lines().any(|line| line.trim() == "eula=true") {
+                bail!("Accept the Minecraft EULA before starting the server");
+            }
+
+            let arguments = if self.software.eq_ignore_ascii_case("forge") {
+                crate::software::forge::launch_arguments(dir).await?
+            } else {
+                if !fs::metadata(dir.join("server.jar"))
+                    .await
+                    .context("Install server.jar before starting the server")?
+                    .is_file()
+                {
+                    bail!("server.jar must be a regular file");
+                }
+                vec![
+                    std::ffi::OsString::from("-jar"),
+                    "server.jar".into(),
+                    "nogui".into(),
+                ]
+            };
+            let java = fs::canonicalize(self.java_binary().await?)
+                .await
+                .context("Could not resolve Java executable")?;
+            (java, arguments)
+        };
+
+        let mut command = tokio::process::Command::new(executable);
+        command
+            .current_dir(dir)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
-            .kill_on_drop(true)
+            .kill_on_drop(true);
+        if !native {
+            command.arg(format!("-Xmx{}M", self.ram));
+        }
+        let mut child = command
+            .args(arguments)
             .spawn()
-            .context("Could not start Java server")?;
+            .context("Could not start server process")?;
 
         let stdin = child.stdin.take().context("Server stdin is unavailable")?;
         let stdout = child
@@ -374,5 +402,45 @@ mod tests {
             .is_err()
         );
         assert!(!root.exists());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn pumpkin_runs_as_native_process_and_stops_through_console() -> Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let root = std::env::temp_dir().join(format!("localcraft-pumpkin-test-{}", Uuid::new_v4()));
+        let instance = ServerInstance::create_in(
+            &root,
+            "Pumpkin test".into(),
+            "26.3".into(),
+            "Pumpkin".into(),
+            "2048".into(),
+            None,
+        )
+        .await?;
+        let directory = root.join(&instance.id);
+        assert!(!fs::try_exists(directory.join("eula.txt")).await?);
+        let executable = directory.join(pumpkin::executable_name());
+        fs::write(
+            &executable,
+            b"#!/bin/sh\nprintf 'native-ready\\n'\nwhile IFS= read -r line; do printf '%s\\n' \"$line\"; [ \"$line\" = stop ] && exit 0; done\n",
+        )
+        .await?;
+        let mut permissions = fs::metadata(&executable).await?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&executable, permissions).await?;
+
+        instance.start_in(&directory).await?;
+        instance.send_command("list".into()).await?;
+        instance.stop(Duration::from_secs(1)).await?;
+
+        let lines = instance.console().lines;
+        assert!(lines.iter().any(|line| line.content.text == "native-ready"));
+        assert!(lines.iter().any(|line| line.content.text == "list"));
+        assert!(lines.iter().any(|line| line.content.text == "stop"));
+
+        fs::remove_dir_all(root).await?;
+        Ok(())
     }
 }

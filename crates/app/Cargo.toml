@@ -1,6 +1,6 @@
 [package]
 name = "LocalCraft"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 description = "A native desktop manager for local Minecraft servers."
 authors = ["moiCR"]
@@ -20,6 +20,13 @@ before-packaging-command = "powershell -NoProfile -ExecutionPolicy Bypass -File 
 installer-icon = "../../target/packager/windows-assets/localcraft.ico"
 installMode = "currentUser"
 compression = "lzma"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "../../target/release/LocalCraft", dest = "/usr/bin/LocalCraft", mode = "755" },
+    { source = "../../packaging/linux/localcraft.desktop", dest = "/usr/share/applications/LocalCraft.desktop", mode = "644" },
+    { source = "../../target/packager/linux-assets/localcraft.png", dest = "/usr/share/icons/hicolor/256x256/apps/com.moiCR.LocalCraft.png", mode = "644" },
+]
 
 [[bin]]
 name = "LocalCraft"

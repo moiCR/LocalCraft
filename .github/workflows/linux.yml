@@ -1,0 +1,180 @@
+name: Linux
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag to update
+        required: true
+        type: string
+      source_ref:
+        description: Git ref to build
+        required: true
+        type: string
+    outputs:
+      platform_manifest:
+        description: Linux updater manifest entries
+        value: ${{ jobs.package.outputs.platform_manifest }}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag, for example v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    outputs:
+      platform_manifest: ${{ steps.manifest.outputs.platform_manifest }}
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential clang cmake curl file jq pkg-config \
+            libasound2-dev libfontconfig-dev libglib2.0-dev \
+            libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev \
+            libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxcb-randr0-dev libxcb-icccm4-dev libxcb-image0-dev \
+            libxcb-keysyms1-dev libxcb-xkb-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libfuse2t64 squashfs-tools
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate release target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(cargo metadata --manifest-path crates/app/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "LocalCraft") | .version')"
+          if [[ "${RELEASE_TAG#v}" != "$version" ]]; then
+            echo "Release tag $RELEASE_TAG does not match app version $version." >&2
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+
+      - name: Install packagers and Tauri signer
+        run: |
+          cargo install --locked cargo-packager --version 0.11.8
+          cargo install --locked cargo-generate-rpm --version 0.21.0
+          npm install --global @tauri-apps/cli
+
+      - name: Build LocalCraft
+        run: cargo build --release --locked --manifest-path crates/app/Cargo.toml
+
+      - name: Package AppImage and Debian installer
+        run: |
+          set -euo pipefail
+          mkdir -p target/packager/linux-assets
+          icon="$(find target/release/build -path '*/out/localcraft.png' -type f -print -quit)"
+          test -n "$icon"
+          cp "$icon" target/packager/linux-assets/localcraft.png
+          node packaging/updater/create-packager-config.mjs linux target/packager/linux-config.json
+          cargo packager --release --config target/packager/linux-config.json
+
+      - name: Package RPM
+        working-directory: crates/app
+        run: cargo generate-rpm
+
+      - name: Sign and stage Linux installers
+        id: manifest
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          release_dir="$GITHUB_WORKSPACE/target/updater-release"
+          mkdir -p "$release_dir"
+
+          appimage_source="$(find target/packager -maxdepth 1 -type f -name 'LocalCraft_*_x86_64.AppImage' -print -quit)"
+          deb_source="$(find target/packager -maxdepth 1 -type f -name 'LocalCraft_*_amd64.deb' -print -quit)"
+          rpm_source="$(find crates/app/target target -type f -name '*.rpm' -print -quit)"
+          test -n "$appimage_source"
+          test -n "$deb_source"
+          test -n "$rpm_source"
+
+          appimage="$release_dir/LocalCraft_${version}_amd64.AppImage"
+          deb="$release_dir/LocalCraft_${version}_amd64.deb"
+          rpm="$release_dir/LocalCraft-${version}-1.x86_64.rpm"
+          cp "$appimage_source" "$appimage"
+          cp "$deb_source" "$deb"
+          cp "$rpm_source" "$rpm"
+
+          for package in "$appimage" "$deb" "$rpm"; do
+            tauri signer sign "$package" --app-version "$version"
+            test -s "$package.sig"
+          done
+
+          node packaging/updater/manifest.mjs fragment \
+            --platform linux \
+            --tag "$RELEASE_TAG" \
+            --version "$version" \
+            --dir "$release_dir" \
+            --out "$release_dir/platform-manifest.json"
+          printf 'platform_manifest=%s\n' "$(cat "$release_dir/platform-manifest.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Replace Linux release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" target/updater-release/LocalCraft* \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+  update-manifest:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-manifest-${{ inputs.release_tag }}
+      cancel-in-progress: false
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      PLATFORM_MANIFEST: ${{ needs.package.outputs.platform_manifest }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Merge Linux entries with existing release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/updater-manifest
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern latest.json --dir target/updater-manifest
+          printf '%s' "$PLATFORM_MANIFEST" > target/updater-manifest/platform.json
+          node packaging/updater/manifest.mjs merge \
+            --version "${RELEASE_TAG#v}" \
+            --tag "$RELEASE_TAG" \
+            --manifest target/updater-manifest/latest.json \
+            --fragment target/updater-manifest/platform.json \
+            --out target/updater-manifest/latest.json
+          gh release upload "$RELEASE_TAG" target/updater-manifest/latest.json \
+            --repo "$GITHUB_REPOSITORY" --clobber

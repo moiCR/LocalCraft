@@ -11,7 +11,7 @@ use ui::components::{
     select::{Select, Selected},
 };
 
-pub const SOFTWARE: [&str; 5] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla"];
+pub const SOFTWARE: [&str; 6] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"];
 
 pub enum CreationEvent {
     Created(ServerInstance),
@@ -36,7 +36,6 @@ pub struct CreateServerModal {
     pub status: Option<String>,
     pub error: Option<String>,
     pub latest_build: Option<BuildOption>,
-    pub minimum_java: u8,
     generation: u64,
     _subscriptions: Vec<Subscription>,
 }
@@ -77,7 +76,6 @@ impl CreateServerModal {
             status: None,
             error: None,
             latest_build: None,
-            minimum_java: 8,
             generation: 0,
             _subscriptions: subscriptions,
         };
@@ -169,22 +167,28 @@ impl CreateServerModal {
                     this.loading = false;
                     match result {
                         Ok((java, builds)) => {
-                            this.minimum_java = java;
                             this.java.update(cx, |select, cx| {
-                                let mut versions = vec![java, 8, 17, 21, 25];
-                                versions.retain(|v| *v >= java);
-                                versions.sort_unstable();
-                                versions.dedup();
-                                select.set_options(
-                                    versions.iter().map(|v| v.to_string().into()).collect(),
-                                    cx,
-                                );
-                                let preferred_java =
-                                    cx.global::<AppState>().preferences.default_java_major;
-                                select.selected = preferred_java
-                                    .and_then(|version| versions.iter().position(|v| *v == version))
-                                    .or(Some(0));
-                                select.enabled = true;
+                                select.set_options(Vec::new(), cx);
+                                if let Some(java) = java {
+                                    let mut versions = vec![java, 8, 17, 21, 25];
+                                    versions.retain(|v| *v >= java);
+                                    versions.sort_unstable();
+                                    versions.dedup();
+                                    select.set_options(
+                                        versions.iter().map(|v| v.to_string().into()).collect(),
+                                        cx,
+                                    );
+                                    let preferred_java =
+                                        cx.global::<AppState>().preferences.default_java_major;
+                                    select.selected = preferred_java
+                                        .and_then(|version| {
+                                            versions.iter().position(|v| *v == version)
+                                        })
+                                        .or(Some(0));
+                                    select.enabled = true;
+                                } else {
+                                    select.enabled = false;
+                                }
                             });
                             this.latest_build = builds.into_iter().next();
                         }
@@ -209,10 +213,20 @@ impl CreateServerModal {
             .latest_build
             .as_ref()
             .ok_or("No stable build is available")?;
+        let software = get(&self.software)?;
+        let java = if services::software::pumpkin::is_pumpkin(&software) {
+            None
+        } else {
+            Some(
+                get(&self.java)?
+                    .parse()
+                    .map_err(|_| "Choose a Java runtime")?,
+            )
+        };
         let specification = CreateServer {
             name: self.name.read(cx).value().trim().to_owned(),
             version: get(&self.version)?,
-            software: get(&self.software)?,
+            software,
             build: chosen.label.clone(),
             ram: self
                 .ram
@@ -226,9 +240,7 @@ impl CreateServerModal {
                 .value()
                 .parse()
                 .map_err(|_| "Port must be between 1 and 65535")?,
-            java: get(&self.java)?
-                .parse()
-                .map_err(|_| "Choose a Java runtime")?,
+            java,
             accepted_eula: self.accepted_eula,
             download: chosen.download.clone(),
         };
@@ -277,7 +289,7 @@ impl CreateServerModal {
         let java = cx.global::<AppState>().java_service.clone();
         let (tx, mut rx) = tokio::sync::mpsc::channel(8);
         cx.global::<AppState>().background_runtime.spawn(async move {
-            let (java_tx, mut java_rx) = tokio::sync::watch::channel(JavaProgress::new(specification.java));
+            let (java_tx, mut java_rx) = tokio::sync::watch::channel(JavaProgress::new(specification.java.unwrap_or_default()));
             let (download_tx, mut download_rx) = tokio::sync::watch::channel(DownloadProgress {
                 instance_id: String::new(), stage: DownloadStage::Resolving, downloaded: 0, total: None,
             });

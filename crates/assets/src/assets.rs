@@ -4,6 +4,8 @@ use std::borrow::Cow;
 
 #[derive(RustEmbed)]
 #[folder = "icons"]
+#[exclude = "*.exe"]
+#[exclude = "latest.json"]
 pub struct Assets;
 
 #[derive(RustEmbed)]

@@ -1,11 +1,12 @@
 use super::{ServerInstance, server_instance::atomic_write};
 use crate::{
     java::{JavaProgress, JavaService},
-    software::{DownloadProgress, JarDownload, SoftwareService},
+    software::{DownloadProgress, JarDownload, JarKind, SoftwareService, pumpkin},
 };
 use anyhow::{Context, Result, bail};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::watch;
+use toml_edit::{DocumentMut, Item, Table, value};
 
 pub fn default_port() -> u16 {
     25565
@@ -18,7 +19,7 @@ pub struct CreateServer {
     pub build: String,
     pub ram: u32,
     pub port: u16,
-    pub java: u8,
+    pub java: Option<u8>,
     pub accepted_eula: bool,
     pub download: JarDownload,
 }
@@ -28,6 +29,14 @@ impl CreateServer {
         validate_settings(&self.name, self.ram, self.port)?;
         if !self.accepted_eula {
             bail!("Accept the Minecraft EULA to create this server");
+        }
+        if !pumpkin::is_pumpkin(&self.software) && self.java.is_none() {
+            bail!("Select a Java version before creating this server");
+        }
+        if pumpkin::is_pumpkin(&self.software)
+            != matches!(&self.download.kind, JarKind::NativeServer { .. })
+        {
+            bail!("Pumpkin must use its native server executable");
         }
         if self.download.sha256.as_ref().is_some_and(|checksum| {
             checksum.len() != 64 || !checksum.bytes().all(|b| b.is_ascii_hexdigit())
@@ -44,12 +53,20 @@ impl CreateServer {
         progress: &watch::Sender<DownloadProgress>,
     ) -> Result<ServerInstance> {
         self.validate()?;
+        let java_version = if pumpkin::is_pumpkin(&self.software) {
+            None
+        } else {
+            Some(
+                self.java
+                    .context("Select a Java version before creating this server")?,
+            )
+        };
         let mut server = ServerInstance::create(
             self.name,
             self.version,
             self.software,
             self.ram.to_string(),
-            Some(self.java.to_string()),
+            java_version.map(|version| version.to_string()),
         )
         .await?;
         server.port = self.port;
@@ -61,18 +78,26 @@ impl CreateServer {
                 directory.join("config.pending"),
             )
             .await?;
-            let runtime = java.install_for_instance(&server, java_progress).await?;
+            let runtime = if java_version.is_some() {
+                Some(java.install_for_instance(&server, java_progress).await?)
+            } else {
+                None
+            };
             SoftwareService::new()
                 .download_resolved(
                     &server,
-                    runtime.binary_path(),
+                    runtime
+                        .as_ref()
+                        .map(|runtime| runtime.binary_path().as_path()),
                     None,
                     progress,
                     &self.download,
                 )
                 .await?;
             server.write_port().await?;
-            server.accept_eula().await?;
+            if !pumpkin::is_pumpkin(&server.software) {
+                server.accept_eula().await?;
+            }
             server.save().await?;
             let _ = tokio::fs::remove_file(directory.join("config.pending")).await;
             Ok(())
@@ -123,6 +148,9 @@ impl ServerInstance {
         self.save().await
     }
     async fn write_port(&self) -> Result<()> {
+        if pumpkin::is_pumpkin(&self.software) {
+            return write_pumpkin_port(&self.directory()?.join("pumpkin.toml"), self.port).await;
+        }
         let path = self.directory()?.join("server.properties");
         let contents = match tokio::fs::read_to_string(&path).await {
             Ok(contents) => contents,
@@ -139,6 +167,36 @@ impl ServerInstance {
     }
 }
 
+async fn write_pumpkin_port(path: &std::path::Path, port: u16) -> Result<()> {
+    let (mut document, is_new) = match tokio::fs::read_to_string(path).await {
+        Ok(contents) => (
+            contents
+                .parse::<DocumentMut>()
+                .context("Could not parse pumpkin.toml")?,
+            false,
+        ),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (DocumentMut::new(), true),
+        Err(error) => return Err(error).context("Could not read pumpkin.toml"),
+    };
+    let networking = table_mut(document.as_table_mut(), "networking")?;
+    let java = table_mut(networking, "java")?;
+    java.insert("address", value(format!("0.0.0.0:{port}")));
+    if is_new {
+        let bedrock = table_mut(networking, "bedrock")?;
+        bedrock.insert("enabled", value(false));
+    }
+    let contents = document.to_string();
+    atomic_write(path, contents.as_bytes()).await
+}
+
+fn table_mut<'a>(table: &'a mut Table, key: &str) -> Result<&'a mut Table> {
+    table
+        .entry(key)
+        .or_insert(Item::Table(Table::new()))
+        .as_table_mut()
+        .with_context(|| format!("pumpkin.toml field {key} must be a table"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,7 +210,7 @@ mod tests {
             build: "100".into(),
             ram: 2048,
             port: 25565,
-            java: 21,
+            java: Some(21),
             accepted_eula: false,
             download: JarDownload {
                 url: "https://example.invalid/server.jar".into(),
@@ -174,5 +232,62 @@ mod tests {
         assert!(validate_settings("world", 0, 25565).is_err());
         assert!(validate_settings("world", 2048, 0).is_err());
         assert!(validate_settings("world", 2048, 25565).is_ok());
+    }
+
+    #[test]
+    fn pumpkin_creation_accepts_missing_java_version() {
+        let draft = CreateServer {
+            name: "Pumpkin test".into(),
+            version: "26.3".into(),
+            software: "Pumpkin".into(),
+            build: "0.2.0+26.3-26.51".into(),
+            ram: 2048,
+            port: 25565,
+            java: None,
+            accepted_eula: true,
+            download: JarDownload {
+                url: "https://example.invalid/pumpkin-server".into(),
+                sha256: Some("a".repeat(64)),
+                size: Some(1),
+                kind: JarKind::NativeServer {
+                    filename: "pumpkin-server".into(),
+                },
+            },
+        };
+        assert!(draft.validate().is_ok());
+    }
+
+    #[tokio::test]
+    async fn pumpkin_port_config_disables_bedrock_and_preserves_existing_settings() -> Result<()> {
+        let root = std::env::temp_dir().join(format!(
+            "localcraft-pumpkin-config-{}",
+            uuid::Uuid::new_v4()
+        ));
+        tokio::fs::create_dir(&root).await?;
+        let path = root.join("pumpkin.toml");
+
+        write_pumpkin_port(&path, 25570).await?;
+        let initial = tokio::fs::read_to_string(&path).await?;
+        assert!(initial.contains("address = \"0.0.0.0:25570\""));
+        assert!(initial.contains("enabled = false"));
+
+        tokio::fs::write(
+            &path,
+            "[networking.java]\naddress = \"0.0.0.0:25570\"\n[networking.bedrock]\nenabled = true\n",
+        )
+        .await?;
+        write_pumpkin_port(&path, 25571).await?;
+        let updated: DocumentMut = tokio::fs::read_to_string(&path).await?.parse()?;
+        assert_eq!(
+            updated["networking"]["java"]["address"].as_str(),
+            Some("0.0.0.0:25571")
+        );
+        assert_eq!(
+            updated["networking"]["bedrock"]["enabled"].as_bool(),
+            Some(true)
+        );
+
+        tokio::fs::remove_dir_all(root).await?;
+        Ok(())
     }
 }

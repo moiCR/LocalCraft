@@ -4,9 +4,9 @@ A local Minecraft server manager built with GPUI (The Zed UI framework).
 ## Scope
 **LocalCraft** is a desktop application designed to simplify the creation and management of local Minecraft servers.
 
-Instead of manually installing Java runtimes, downloading server software such as Paper, Spigot, or Vanilla, configuring directories, and managing multiple server environments, LocalCraft brings everything together into a single streamlined interface.
+Instead of manually installing Java runtimes, downloading server software such as Paper, Spigot, Vanilla, or experimental Pumpkin, configuring directories, and managing multiple server environments, LocalCraft brings everything together into a single streamlined interface.
 
-The application allows users to create and manage isolated server instances, automatically handle the required Java runtimes, configure server distributions, and keep each environment organized without relying on complex manual setups.
+The application allows users to create and manage isolated server instances, automatically handle Java runtimes where needed, run Pumpkin natively without Java, configure server distributions, and keep each environment organized without relying on complex manual setups.
 
 LocalCraft also integrates with **Playit**, making it easy to expose locally hosted servers to the internet without requiring port forwarding or a public IP address.
 

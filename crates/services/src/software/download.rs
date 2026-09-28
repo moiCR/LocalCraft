@@ -1,3 +1,5 @@
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::{
     path::Path,
     time::{Duration, Instant},
@@ -43,7 +45,7 @@ async fn transfer(
         .get(&jar.url)
         .send()
         .await
-        .context("Could not download server jar")?
+        .context("Could not download server software")?
         .error_for_status()?;
     let total = jar.size.or(response.content_length());
     let mut file = fs::OpenOptions::new()
@@ -81,18 +83,22 @@ async fn transfer(
         value.downloaded = downloaded;
     });
     if downloaded == 0 || total.is_some_and(|total| downloaded != total) {
-        bail!("Incomplete server jar download");
+        bail!("Incomplete server software download");
     }
     if let (Some(expected), Some(digest)) = (expected, digest)
         && !format!("{:x}", digest.finalize()).eq_ignore_ascii_case(expected)
     {
-        bail!("Server jar SHA256 verification failed");
+        bail!("Server software SHA256 verification failed");
     }
     file.sync_all().await?;
     drop(file);
+    if matches!(&jar.kind, super::JarKind::NativeServer { .. }) {
+        #[cfg(unix)]
+        fs::set_permissions(temporary, std::fs::Permissions::from_mode(0o755)).await?;
+    }
     fs::rename(temporary, destination)
         .await
-        .context("Could not install verified jar")
+        .context("Could not install verified server software")
 }
 
 #[cfg(test)]
@@ -148,8 +154,9 @@ mod tests {
             size: Some(7),
             kind: JarKind::Server,
         };
+        let invalid_hash = "0".repeat(64);
         assert!(
-            save(&client, &jar, &"0".repeat(64), &target, &progress)
+            save(&client, &jar, Some(&invalid_hash), &target, &progress)
                 .await
                 .is_err()
         );
@@ -158,7 +165,7 @@ mod tests {
         let (url, task) = serve(b"new jar").await?;
         let jar = JarDownload { url, ..jar };
         let hash = format!("{:x}", Sha256::digest(b"new jar"));
-        save(&client, &jar, &hash, &target, &progress).await?;
+        save(&client, &jar, Some(&hash), &target, &progress).await?;
         task.await??;
         assert_eq!(fs::read(&target).await?, b"new jar");
         assert_eq!(receiver.borrow().downloaded, 7);
@@ -168,6 +175,44 @@ mod tests {
             count += 1;
         }
         assert_eq!(count, 1);
+        fs::remove_dir_all(root).await?;
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn native_download_is_executable_after_verification() -> Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let root =
+            std::env::temp_dir().join(format!("localcraft-native-download-{}", Uuid::new_v4()));
+        fs::create_dir(&root).await?;
+        let target = root.join("pumpkin-server");
+        let client = Client::new();
+        let (progress, _) = watch::channel(DownloadProgress {
+            instance_id: "test".into(),
+            stage: DownloadStage::Resolving,
+            downloaded: 0,
+            total: None,
+        });
+        let (url, task) = serve(b"native executable").await?;
+        let jar = JarDownload {
+            url,
+            sha256: Some(format!("{:x}", Sha256::digest(b"native executable"))),
+            size: Some(17),
+            kind: JarKind::NativeServer {
+                filename: "pumpkin-server".into(),
+            },
+        };
+
+        save(&client, &jar, None, &target, &progress).await?;
+        task.await??;
+
+        assert_eq!(fs::read(&target).await?, b"native executable");
+        assert_eq!(
+            fs::metadata(&target).await?.permissions().mode() & 0o111,
+            0o111
+        );
         fs::remove_dir_all(root).await?;
         Ok(())
     }

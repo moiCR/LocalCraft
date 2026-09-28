@@ -176,8 +176,7 @@ impl ServerScreen {
                         server.stop(Duration::from_secs(30)).await?;
                     }
                     if matches!(operation, Operation::Start | Operation::Restart) {
-                        let java = server.java_binary().await?;
-                        server.start(&java).await?;
+                        server.start().await?;
                     }
                     Ok::<_, anyhow::Error>(())
                 }

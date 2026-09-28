@@ -6,7 +6,10 @@ unique temporary file, checks its SHA256 when published and its size when known,
 then replaces the destination.
 Paper, Vanilla and Fabric produce `server.jar`. Forge downloads and runs its
 installer with an explicitly selected Java executable and records the installed
-version for the instance launcher.
+version for the instance launcher. Pumpkin resolves its latest stable release,
+downloads the current platform's native executable, verifies GitHub's SHA256 and
+asset size, and restores executable permissions on Unix. Pumpkin currently exposes
+only the Minecraft version encoded in that release tag.
 
 Call async methods on the dedicated Tokio runtime. Progress uses a `watch` channel
 so a slow GPUI consumer receives the latest update without buffering every chunk.
@@ -33,6 +36,10 @@ SHA256 still use HTTPS and are checked against their known size. Mojang publishe
 SHA1 for Vanilla, while Fabric's generated server jar has no published checksum.
 Forge uses its Maven `.sha256` sidecar when available. Callers may pass
 `expected_sha256` when they have a trusted hash for the exact artifact.
+
+Pumpkin instances launch the native executable without Java or JVM heap flags.
+Their `pumpkin.toml` uses the selected Java Edition port, and Bedrock networking
+starts disabled so each instance keeps one managed port.
 
 Downloads hold the instance lifecycle lock, preventing start or concurrent
 installation while replacing files. Running instances cannot be updated.

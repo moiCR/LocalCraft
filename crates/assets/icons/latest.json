@@ -1,0 +1,35 @@
+{
+  "version": "0.6.2",
+  "notes": "### What's New in v0.6.2\r\n\r\n### Fixes\r\n\r\n- Improved Linux performance when starting servers with heavy console output.\r\n- Added RPM package generation to release builds.",
+  "pub_date": "2026-05-14T00:19:28.017Z",
+  "platforms": {
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbDFOOTh1TGdFajZuelcyOGY0OHYvWVdlTUIxNGJMcG8zY0NzSFlQL1V5dmx4TWVWanZlMTJ5TGRpYzFCN3J1Q1IvL014SWw3T01LMWs4T2kxZWM2Q0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3ODg5CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl9hbWQ2NC5BcHBJbWFnZQp4YTJKcmVSUHNjRUdoNlhLc2RKYUhvT1hZOWkwZ0J0TC9hVU53TG5CZWsyVVdQMFh5UFNkNkNlakZMMFBpUGZISlFKWE5hM3p6QmtDcUI0SGhZQW9EQT09Cg==",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_amd64.AppImage"
+    },
+    "linux-x86_64-appimage": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbDFOOTh1TGdFajZuelcyOGY0OHYvWVdlTUIxNGJMcG8zY0NzSFlQL1V5dmx4TWVWanZlMTJ5TGRpYzFCN3J1Q1IvL014SWw3T01LMWs4T2kxZWM2Q0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3ODg5CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl9hbWQ2NC5BcHBJbWFnZQp4YTJKcmVSUHNjRUdoNlhLc2RKYUhvT1hZOWkwZ0J0TC9hVU53TG5CZWsyVVdQMFh5UFNkNkNlakZMMFBpUGZISlFKWE5hM3p6QmtDcUI0SGhZQW9EQT09Cg==",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_amd64.AppImage"
+    },
+    "linux-x86_64-deb": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbCtRdCtJUS9zaEUxV1BJeFo0d1lmUklhZDJkL1diVnpUMU14NVRoU1F4Wm85N1Jxb25DZHNSTXg1VHpYeWhPMlIzZWU5NjkwcmlTdWdwYXhtckwzMFFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3ODg5CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl9hbWQ2NC5kZWIKV29JU01FK3BxTmpMdE10SnFCSjV3ZTBIQmRxbG9nYmFMTEk3Mlcrb1BmWWM2SFBuV0QyUzZaRWJqVjVuUTFMN0NYQWZrVXdqdG9wK0s4S1RzUFRURHc9PQo=",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_amd64.deb"
+    },
+    "linux-x86_64-rpm": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbDc4ekZQdGFxNDY1NEtrc0RiN3A2UEk3YWhpSGFZYnp5ZHg0RzdIU0I5SkVDYlVjR1RMc0l0OFdtbVdlcEhXMkFqaFVGTlR6UUdTdVVEYlg3MUxRSmdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3ODg5CWZpbGU6TG9jYWxDcmFmdC0wLjYuMi0xLng4Nl82NC5ycG0KdWdjU1NPK2x2SUozcEhqdnNuTmsvSWt6UmJtM1JMbTVVVE4wRkZFc1UreHRLKy9ucElrRUk3TGp6QWhtQ0RXS1FtcXZDWlN5d2FId1g4UHI5NmNGQkE9PQo=",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft-0.6.2-1.x86_64.rpm"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbC9WUllNdHZlR2Zoa3J6Y3B3clpGZFMvdXdUNXdwMEFQbjNWVU12TVpHTkN4RnhqTkt5ck9OVmk1UC9iR3ZwdjV4VWlUUGhYb1lia3ZycUJJeFkyakFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3OTY1CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl94NjRfZW4tVVMubXNpCllONHJtN3pHY2o3R0xDZHdZM2RiOGhsK0FSbno1WWM0U0NzWStTMXgyZ21xelExMzFyN0FvdVlpY2R5SWRSa1VaZm5YMHFwb0tia1JrUGN4UjdERUNnPT0K",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_x64_en-US.msi"
+    },
+    "windows-x86_64-msi": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbC9WUllNdHZlR2Zoa3J6Y3B3clpGZFMvdXdUNXdwMEFQbjNWVU12TVpHTkN4RnhqTkt5ck9OVmk1UC9iR3ZwdjV4VWlUUGhYb1lia3ZycUJJeFkyakFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3OTY1CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl94NjRfZW4tVVMubXNpCllONHJtN3pHY2o3R0xDZHdZM2RiOGhsK0FSbno1WWM0U0NzWStTMXgyZ21xelExMzFyN0FvdVlpY2R5SWRSa1VaZm5YMHFwb0tia1JrUGN4UjdERUNnPT0K",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_x64_en-US.msi"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRFZkSVVkeHIwbC9SU2lSa0NZSm02ZmZVK3Vvc1ZUVnZ0NVFmdVFoY21KOWJYcThMZmpEVmhDalViV0RQRmRJZHFKYlpMazJpTENyMjdVT00xa0h2U0VBQWx6T050TWdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NzE3OTY1CWZpbGU6TG9jYWxDcmFmdF8wLjYuMl94NjQtc2V0dXAuZXhlCnRSZXRnNnlZS0ROVDlURWQ0and1VlhJdXZ0eTRNV0N4THJ3anZMVysvNzJQVG9VV1M0RzFoN3NRUkFFeHBjSTg4UDJUbGNwYldNbURDeTdjZ1g2akF3PT0K",
+      "url": "https://github.com/moiCR/LocalCraft/releases/download/v0.6.2/LocalCraft_0.6.2_x64-setup.exe"
+    }
+  }
+}

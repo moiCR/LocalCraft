@@ -129,6 +129,13 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                                 .border_color(palette.border)
                                 .p_6()
                                 .child(workspace.settings_preferences.clone()),
+                        )
+                        .child(
+                            div()
+                                .border_t_1()
+                                .border_color(palette.border)
+                                .p_6()
+                                .child(workspace.updater.clone()),
                         ),
                 )
                 .child(

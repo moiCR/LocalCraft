@@ -96,6 +96,7 @@ impl SoftwareService {
             .filter(|entry| entry.get("type").and_then(Value::as_str) == Some("release"))
             .filter_map(|entry| entry.get("id").and_then(Value::as_str).map(str::to_owned))
             .collect(),
+            "Pumpkin" => super::pumpkin::versions(&client).await?,
             _ => bail!("Unsupported software: {software}"),
         };
         versions.sort_by_key(|version| std::cmp::Reverse(version_key(version)));
@@ -106,9 +107,17 @@ impl SoftwareService {
         Ok(versions)
     }
 
-    pub async fn builds(&self, software: &str, version: &str) -> Result<(u8, Vec<BuildOption>)> {
+    pub async fn builds(
+        &self,
+        software: &str,
+        version: &str,
+    ) -> Result<(Option<u8>, Vec<BuildOption>)> {
         validate_version(version)?;
         let client = client()?;
+        if software == "Pumpkin" {
+            let (label, download) = super::pumpkin::build(&client, version).await?;
+            return Ok((None, vec![BuildOption { label, download }]));
+        }
         let manifest = json(
             &client,
             "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
@@ -224,6 +233,7 @@ impl SoftwareService {
                 let download = self.get_jar(software, version).await?;
                 let label = match &download.kind {
                     JarKind::ForgeInstaller { version } => version.clone(),
+                    JarKind::NativeServer { filename } => filename.clone(),
                     JarKind::Server => "Official release".into(),
                 };
                 vec![BuildOption { label, download }]
@@ -233,7 +243,7 @@ impl SoftwareService {
         if builds.is_empty() {
             bail!("No stable builds are available for this version");
         }
-        Ok((java, builds))
+        Ok((Some(java), builds))
     }
 }
 
@@ -248,7 +258,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Requires the official provider APIs"]
     async fn live_provider_catalogs() -> Result<()> {
-        for software in ["Paper", "Purpur", "Fabric", "Forge", "Vanilla"] {
+        for software in ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"] {
             let service = SoftwareService::new();
             let versions = service.versions(software).await?;
             let version = versions
@@ -257,15 +267,16 @@ mod tests {
                 .or_else(|| versions.first())
                 .context("Empty catalog")?;
             let (java, builds) = service.builds(software, version).await?;
-            assert!(java >= 8);
+            assert!(java.is_none_or(|java| java >= 8));
             assert!(!builds.is_empty());
             assert!(
                 builds
                     .iter()
                     .all(|build| build.download.url.starts_with("https://"))
             );
+            let runtime = java.map_or_else(|| "native".to_owned(), |java| java.to_string());
             eprintln!(
-                "{software}: {} versions, {} builds for {version}, Java {java}",
+                "{software}: {} versions, {} builds for {version}, runtime {runtime}",
                 versions.len(),
                 builds.len()
             );

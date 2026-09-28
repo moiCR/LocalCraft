@@ -2,14 +2,19 @@ use std::{env, error::Error, fs, path::PathBuf};
 
 const LOGO: &str = include_str!("../assets/icons/logo.svg");
 const ICON_SIZES: [u32; 7] = [16, 24, 32, 48, 64, 128, 256];
+type IconImage = (u32, Vec<u8>);
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=../assets/icons/logo.svg");
 
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is missing")?);
+    let icons = make_icon_images()?;
+    let largest_icon = icons.last().ok_or("No icon sizes were generated")?;
+    fs::write(out_dir.join("localcraft.png"), &largest_icon.1)?;
+
     if env::var("CARGO_CFG_TARGET_OS")?.as_str() == "windows" {
-        let icon_path = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is missing")?)
-            .join("localcraft.ico");
-        fs::write(&icon_path, make_icon()?)?;
+        let icon_path = out_dir.join("localcraft.ico");
+        fs::write(&icon_path, make_windows_icon(&icons)?)?;
         winres::WindowsResource::new()
             .set_icon(icon_path.to_str().ok_or("Icon path is not valid UTF-8")?)
             .compile()?;
@@ -18,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn make_icon() -> Result<Vec<u8>, Box<dyn Error>> {
+fn make_icon_images() -> Result<Vec<IconImage>, Box<dyn Error>> {
     let svg_start = LOGO.find('>').ok_or("Logo SVG has no root element")? + 1;
     let svg_end = LOGO.rfind("</svg>").ok_or("Logo SVG is not closed")?;
     let logo_content = &LOGO[svg_start..svg_end];
@@ -37,16 +42,20 @@ fn make_icon() -> Result<Vec<u8>, Box<dyn Error>> {
             resvg::tiny_skia::Transform::from_scale(scale, scale),
             &mut pixmap.as_mut(),
         );
-        pngs.push(pixmap.encode_png()?);
+        pngs.push((size, pixmap.encode_png()?));
     }
 
+    Ok(pngs)
+}
+
+fn make_windows_icon(pngs: &[IconImage]) -> Result<Vec<u8>, Box<dyn Error>> {
     let count = u16::try_from(pngs.len())?;
     let mut icon = Vec::new();
     icon.extend_from_slice(&[0, 0, 1, 0]);
     icon.extend_from_slice(&count.to_le_bytes());
 
     let mut image_offset = 6 + 16 * pngs.len();
-    for (size, png) in ICON_SIZES.iter().zip(&pngs) {
+    for (size, png) in pngs {
         icon.push(if *size == 256 { 0 } else { *size as u8 });
         icon.push(if *size == 256 { 0 } else { *size as u8 });
         icon.extend_from_slice(&[0, 0]);
@@ -56,8 +65,8 @@ fn make_icon() -> Result<Vec<u8>, Box<dyn Error>> {
         icon.extend_from_slice(&u32::try_from(image_offset)?.to_le_bytes());
         image_offset += png.len();
     }
-    for png in pngs {
-        icon.extend_from_slice(&png);
+    for (_, png) in pngs {
+        icon.extend_from_slice(png);
     }
 
     Ok(icon)

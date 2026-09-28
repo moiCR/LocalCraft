@@ -3,6 +3,7 @@ mod download;
 pub mod fabric;
 pub mod forge;
 pub mod paper;
+pub mod pumpkin;
 pub mod vanilla;
 
 use std::{future::Future, path::Path, time::Duration};
@@ -24,6 +25,7 @@ pub struct JarDownload {
 #[derive(Debug, Clone)]
 pub enum JarKind {
     Server,
+    NativeServer { filename: String },
     ForgeInstaller { version: String },
 }
 
@@ -76,6 +78,9 @@ impl SoftwareService {
             }
             "fabric" => fabric::FabricSoftware::new().get_jar(client, version).await,
             "forge" => forge::ForgeSoftware::new().get_jar(client, version).await,
+            "pumpkin" => pumpkin::build(client, version)
+                .await
+                .map(|(_, download)| download),
             _ => bail!("Unsupported server software: {software}"),
         }
     }
@@ -131,7 +136,7 @@ impl SoftwareService {
     pub async fn download_resolved(
         &self,
         server: &ServerInstance,
-        java: &Path,
+        java: Option<&Path>,
         expected_sha256: Option<&str>,
         progress: &watch::Sender<DownloadProgress>,
         jar: &JarDownload,
@@ -144,14 +149,7 @@ impl SoftwareService {
             bail!("Stop the server before installing software");
         }
         let result = self
-            .install_resolved(
-                server,
-                Some(java),
-                expected_sha256,
-                progress,
-                jar,
-                &client()?,
-            )
+            .install_resolved(server, java, expected_sha256, progress, jar, &client()?)
             .await;
         progress.send_modify(|value| {
             value.stage = match &result {
@@ -182,6 +180,16 @@ impl SoftwareService {
         match &jar.kind {
             JarKind::Server => {
                 download::save(client, jar, hash, &directory.join("server.jar"), progress).await?
+            }
+            JarKind::NativeServer { filename } => {
+                if Path::new(filename)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    != Some(filename.as_str())
+                {
+                    bail!("Invalid native server executable name");
+                }
+                download::save(client, jar, hash, &directory.join(filename), progress).await?
             }
             JarKind::ForgeInstaller { version } => {
                 let java = java.context("Select a Java executable before installing Forge")?;

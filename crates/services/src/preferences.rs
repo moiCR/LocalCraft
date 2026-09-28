@@ -38,7 +38,7 @@ impl Default for AppPreferences {
 
 impl AppPreferences {
     fn normalize(&mut self) {
-        if !["Paper", "Purpur", "Fabric", "Forge", "Vanilla"]
+        if !["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"]
             .contains(&self.default_software.as_str())
         {
             self.default_software = "Paper".into();
@@ -52,6 +52,21 @@ impl AppPreferences {
         {
             self.default_java_major = None;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pumpkin_is_a_supported_default_software_choice() {
+        let mut preferences = AppPreferences {
+            default_software: "Pumpkin".into(),
+            ..AppPreferences::default()
+        };
+        preferences.normalize();
+        assert_eq!(preferences.default_software, "Pumpkin");
     }
 }
 

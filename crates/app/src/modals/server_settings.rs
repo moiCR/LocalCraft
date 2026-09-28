@@ -6,6 +6,7 @@ use gpui::{
 use services::{
     AppState,
     instance::{ServerInstance, configuration::validate_settings},
+    software::pumpkin,
 };
 use ui::components::{button::button, input::Input};
 
@@ -47,13 +48,12 @@ impl ServerSettings {
             return;
         }
         let name = self.name.read(cx).value().trim().to_owned();
-        let parsed = self
-            .ram
-            .read(cx)
-            .value()
-            .parse::<u32>()
-            .ok()
-            .zip(self.port.read(cx).value().parse::<u16>().ok());
+        let ram = if pumpkin::is_pumpkin(&self.server.software) {
+            Some(2048)
+        } else {
+            self.ram.read(cx).value().parse::<u32>().ok()
+        };
+        let parsed = ram.zip(self.port.read(cx).value().parse::<u16>().ok());
         let Some((ram, port)) = parsed else {
             self.error = Some("Enter valid memory and port numbers".into());
             cx.notify();
@@ -108,6 +108,21 @@ impl ServerSettings {
 impl Render for ServerSettings {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let p = cx.global::<AppState>().theme_manager.palette();
+        let is_pumpkin = pumpkin::is_pumpkin(&self.server.software);
+        let runtime = if is_pumpkin {
+            "Native"
+        } else {
+            self.server
+                .java_version
+                .as_deref()
+                .map_or("Java not selected", |version| match version {
+                    "8" => "Java 8",
+                    "17" => "Java 17",
+                    "21" => "Java 21",
+                    "25" => "Java 25",
+                    _ => "Java",
+                })
+        };
         div()
             .id("server-settings-overlay")
             .absolute()
@@ -150,18 +165,15 @@ impl Render for ServerSettings {
                         div()
                             .flex()
                             .gap_3()
-                            .child(input_field("Memory (MiB)", &self.ram))
+                            .when(!is_pumpkin, |row| {
+                                row.child(input_field("Memory (MiB)", &self.ram))
+                            })
                             .child(input_field("Port", &self.port)),
                     )
                     .child(div().text_xs().text_color(p.muted).child(format!(
-                            "{} · {} · Java {}",
-                            self.server.software,
-                            self.server.version,
-                            self.server
-                                .java_version
-                                .as_deref()
-                                .unwrap_or("not selected")
-                        )))
+                        "{} · {} · {}",
+                        self.server.software, self.server.version, runtime
+                    )))
                     .when(self.running, |el| {
                         el.child(
                             div()

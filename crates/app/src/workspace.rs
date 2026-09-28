@@ -1,6 +1,6 @@
 use gpui::AppContext;
 
-use gpui::{Context, FocusHandle, IntoElement, Render, Window, div, prelude::*};
+use gpui::{Context, FocusHandle, IntoElement, Render, Subscription, Window, div, prelude::*};
 use gpui_router::{Route, Routes};
 use services::AppState;
 
@@ -38,13 +38,17 @@ pub struct Workspace {
     pub settings_focus: FocusHandle,
     pub settings_preferences:
         gpui::Entity<crate::modals::settings_preferences::SettingsPreferences>,
+    pub updater: gpui::Entity<crate::widgets::updater::Updater>,
     sidebar_collapsed_setting: bool,
     previous_focus: Option<FocusHandle>,
+    _updater_subscription: Subscription,
 }
 
 impl Workspace {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let sidebar_collapsed_setting = cx.global::<AppState>().preferences.sidebar_collapsed;
+        let updater = cx.new(crate::widgets::updater::Updater::new);
+        let updater_subscription = cx.observe(&updater, |_, _, cx| cx.notify());
         cx.observe_global::<AppState>(|this, cx| {
             let collapsed = cx.global::<AppState>().preferences.sidebar_collapsed;
             if this.sidebar_collapsed_setting != collapsed {
@@ -66,8 +70,10 @@ impl Workspace {
             settings_focus: cx.focus_handle(),
             settings_preferences: cx
                 .new(crate::modals::settings_preferences::SettingsPreferences::new),
+            updater,
             sidebar_collapsed_setting,
             previous_focus: None,
+            _updater_subscription: updater_subscription,
         }
     }
 

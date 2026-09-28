@@ -1,3 +1,4 @@
+use crate::widgets::updater;
 use crate::workspace::Workspace;
 use gpui::{
     Animation, AnimationExt, App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge,
@@ -127,6 +128,7 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                     window.show_window_menu(event.position);
                 })
         })
+        .child(updater::titlebar_control(workspace, palette, cx))
         .child(control(
             "window-minimize",
             "icons/minimize.svg",

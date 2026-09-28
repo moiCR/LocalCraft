@@ -592,10 +592,14 @@ impl Render for Servers {
                                                             .text_sm()
                                                             .text_color(palette.muted)
                                                             .child(format!(
-                                                                "{} · {} · {} MiB",
+                                                                "{} · {} · {}",
                                                                 server.version,
                                                                 server.software,
-                                                                server.ram
+                                                                if services::software::pumpkin::is_pumpkin(&server.software) {
+                                                                    "Native runtime".to_owned()
+                                                                } else {
+                                                                    format!("{} MiB", server.ram)
+                                                                }
                                                             )),
                                                     ),
                                             )

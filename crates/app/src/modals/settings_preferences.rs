@@ -2,7 +2,7 @@ use gpui::{App, Context, Entity, IntoElement, Render, Subscription, Window, div,
 use services::AppState;
 use ui::components::input::{Input, InputEvent};
 
-const SOFTWARE: [&str; 5] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla"];
+const SOFTWARE: [&str; 6] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"];
 const JAVA_VERSIONS: [Option<u8>; 5] = [None, Some(8), Some(17), Some(21), Some(25)];
 
 pub struct SettingsPreferences {
@@ -144,7 +144,21 @@ impl Render for SettingsPreferences {
                                         .on_click(cx.listener(move |this, _, _, cx| {
                                             this.select_software(software, cx);
                                         }))
-                                        .child(software)
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .items_center()
+                                                .gap_2()
+                                                .child(software)
+                                                .when(software == "Pumpkin", |row| {
+                                                    row.child(
+                                                        div()
+                                                            .text_xs()
+                                                            .text_color(palette.muted)
+                                                            .child("Experimental"),
+                                                    )
+                                                }),
+                                        )
                                 },
                             ))),
                     )

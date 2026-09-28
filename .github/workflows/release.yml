@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Prepare release seed manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          cargo_version="$(cargo metadata --manifest-path crates/app/Cargo.toml --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "LocalCraft") | .version')"
+          if [[ "$version" != "$cargo_version" ]]; then
+            echo "Tag $RELEASE_TAG does not match app version $cargo_version." >&2
+            exit 1
+          fi
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists. Run a platform workflow to replace its assets." >&2
+            exit 1
+          fi
+
+          mkdir -p target/updater-seed
+          previous_tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')"
+          if [[ -n "$previous_tag" ]]; then
+            if gh release view "$previous_tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep --fixed-strings --line-regexp --quiet latest.json; then
+              gh release download "$previous_tag" --repo "$GITHUB_REPOSITORY" --pattern latest.json --dir target/updater-seed
+              node packaging/updater/manifest.mjs seed --previous target/updater-seed/latest.json --out target/updater-seed/latest.json
+            else
+              node packaging/updater/manifest.mjs seed --out target/updater-seed/latest.json
+            fi
+          else
+            node packaging/updater/manifest.mjs seed --out target/updater-seed/latest.json
+          fi
+
+      - name: Create GitHub release from CHANGELOG.md
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ github.token }}
+          tag_name: ${{ github.ref_name }}
+          name: LocalCraft ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: target/updater-seed/latest.json
+
+  windows:
+    needs: release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/windows.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+      source_ref: ${{ github.ref }}
+    secrets: inherit
+
+  linux:
+    needs: release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/linux.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+      source_ref: ${{ github.ref }}
+    secrets: inherit
+
+  update-manifest:
+    needs: [release, windows, linux]
+    if: ${{ always() && needs.release.result == 'success' && (needs.windows.result == 'success' || needs.linux.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-manifest-${{ github.ref_name }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Create combined updater manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          WINDOWS_MANIFEST: ${{ needs.windows.outputs.platform_manifest }}
+          LINUX_MANIFEST: ${{ needs.linux.outputs.platform_manifest }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/updater-release
+          node packaging/updater/manifest.mjs combine \
+            --version "${RELEASE_TAG#v}" \
+            --notes-file CHANGELOG.md \
+            --out target/updater-release/latest.json
+
+      - name: Publish combined updater manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release upload "$RELEASE_TAG" target/updater-release/latest.json --repo "$GITHUB_REPOSITORY" --clobber

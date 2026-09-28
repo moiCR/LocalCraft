@@ -27,6 +27,11 @@ fn full_width_input_field(label: &'static str, input: &gpui::Entity<Input>) -> i
 impl Render for CreateServerModal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.global::<AppState>().theme_manager.palette();
+        let is_pumpkin = self
+            .software
+            .read(cx)
+            .value()
+            .is_some_and(services::software::pumpkin::is_pumpkin);
         div()
             .id("create-server-form")
             .size_full()
@@ -98,8 +103,18 @@ impl Render for CreateServerModal {
                             .gap_4()
                             .child(select::field("Software", &self.software))
                             .child(select::field("Minecraft version", &self.version))
-                            .child(select::field("Java version", &self.java)),
+                            .when(!is_pumpkin, |row| {
+                                row.child(select::field("Java version", &self.java))
+                            }),
                     )
+                    .when(is_pumpkin, |el| {
+                        el.child(
+                            div()
+                                .text_xs()
+                                .text_color(palette.muted)
+                                .child("Experimental. Latest Minecraft release only. No Java required; Bedrock is disabled."),
+                        )
+                    })
                     .when(self.loading, |el| {
                         el.child(
                             div()
@@ -111,12 +126,16 @@ impl Render for CreateServerModal {
                         div()
                             .flex()
                             .gap_4()
-                            .child(input_field("Memory (MiB)", &self.ram))
+                            .when(!is_pumpkin, |row| {
+                                row.child(input_field("Memory (MiB)", &self.ram))
+                            })
                             .child(input_field("Port", &self.port)),
                     )
-                    .child(div().text_xs().text_color(palette.muted).child(
-                        "Java is installed automatically when needed. Servers are created stopped.",
-                    ))
+                    .when(!is_pumpkin, |el| {
+                        el.child(div().text_xs().text_color(palette.muted).child(
+                            "Java is installed automatically when needed. Servers are created stopped.",
+                        ))
+                    })
                     .child(
                         div()
                             .flex()

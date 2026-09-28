@@ -13,8 +13,8 @@ retains the latest update and throttles downloaded-byte updates to 100 ms.
 ```rust,ignore
 let service = JavaService::new();
 let (progress, updates) = tokio::sync::watch::channel(JavaProgress::new(21));
-let java = service.download(21, &progress).await?;
-server.start(java.binary_path()).await?;
+service.install_for_instance(&server, &progress).await?;
+server.start().await?;
 ```
 
 `install_for_instance(&server, &progress).await` reads the instance's `java_version`,

@@ -1,0 +1,161 @@
+name: Windows
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag to update
+        required: true
+        type: string
+      source_ref:
+        description: Git ref to build
+        required: true
+        type: string
+    outputs:
+      platform_manifest:
+        description: Windows updater manifest entries
+        value: ${{ jobs.package.outputs.platform_manifest }}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag, for example v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    outputs:
+      platform_manifest: ${{ steps.manifest.outputs.platform_manifest }}
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      SOURCE_REF: ${{ inputs.source_ref || github.ref }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate release target
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $cargo = Get-Content crates/app/Cargo.toml -Raw
+          $match = [regex]::Match($cargo, '(?m)^version\s*=\s*"([^"]+)"')
+          if (-not $match.Success) { throw 'Could not read the app version from Cargo.toml.' }
+          $cargoVersion = $match.Groups[1].Value
+          $tagVersion = $env:RELEASE_TAG -replace '^v', ''
+          if ($cargoVersion -ne $tagVersion) {
+            throw "Release tag $env:RELEASE_TAG does not match app version $cargoVersion."
+          }
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY
+
+      - name: Install packager and Tauri signer
+        run: |
+          cargo install --locked cargo-packager --version 0.11.8
+          npm install --global @tauri-apps/cli
+
+      - name: Prepare Windows assets and build app
+        shell: pwsh
+        run: ./packaging/windows/prepare.ps1
+
+      - name: Build Windows installer
+        run: |
+          node packaging/updater/create-packager-config.mjs windows target/packager/windows-config.json
+          cargo packager --release --config target/packager/windows-config.json
+
+      - name: Sign and stage updater installer
+        id: manifest
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $version = $env:RELEASE_TAG -replace '^v', ''
+          $installer = Get-ChildItem target/packager -Filter '*-setup.exe' -File -Recurse |
+            Where-Object { $_.Name -like "LocalCraft_${version}_*" } |
+            Select-Object -First 1
+          if ($null -eq $installer) { throw 'The GPUI Windows installer was not produced.' }
+
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE 'target/updater-release'
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+          $installerPath = Join-Path $releaseDir "LocalCraft_${version}_x64-setup.exe"
+          Copy-Item -LiteralPath $installer.FullName -Destination $installerPath
+
+          tauri signer sign $installerPath --app-version $version
+          if (-not (Test-Path "$installerPath.sig" -PathType Leaf)) {
+            throw 'Tauri did not create an installer signature.'
+          }
+
+          node packaging/updater/manifest.mjs fragment `
+            --platform windows `
+            --tag $env:RELEASE_TAG `
+            --version $version `
+            --dir $releaseDir `
+            --out (Join-Path $releaseDir 'platform-manifest.json')
+          $manifest = (Get-Content (Join-Path $releaseDir 'platform-manifest.json') -Raw).Trim()
+          "platform_manifest=$manifest" >> $env:GITHUB_OUTPUT
+
+      - name: Replace Windows release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE 'target/updater-release'
+          gh release upload $env:RELEASE_TAG `
+            --repo $env:GITHUB_REPOSITORY `
+            --clobber `
+            (Join-Path $releaseDir "LocalCraft_$($env:RELEASE_TAG -replace '^v', '')_x64-setup.exe") `
+            (Join-Path $releaseDir "LocalCraft_$($env:RELEASE_TAG -replace '^v', '')_x64-setup.exe.sig")
+
+  update-manifest:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-manifest-${{ inputs.release_tag }}
+      cancel-in-progress: false
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      PLATFORM_MANIFEST: ${{ needs.package.outputs.platform_manifest }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Merge Windows entries with existing release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/updater-manifest
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern latest.json --dir target/updater-manifest
+          printf '%s' "$PLATFORM_MANIFEST" > target/updater-manifest/platform.json
+          node packaging/updater/manifest.mjs merge \
+            --version "${RELEASE_TAG#v}" \
+            --tag "$RELEASE_TAG" \
+            --manifest target/updater-manifest/latest.json \
+            --fragment target/updater-manifest/platform.json \
+            --out target/updater-manifest/latest.json
+          gh release upload "$RELEASE_TAG" target/updater-manifest/latest.json \
+            --repo "$GITHUB_REPOSITORY" --clobber
