@@ -73,8 +73,8 @@ jobs:
 
       - name: Build Windows installer
         run: |
-          node packaging/updater/create-packager-config.mjs windows target/packager/windows-config.json
-          cargo packager --release --config target/packager/windows-config.json
+          node packaging/updater/create-packager-config.mjs windows target/packager-windows.json
+          cargo packager --release --config target/packager-windows.json
 
       - name: Sign and stage updater installer
         id: manifest

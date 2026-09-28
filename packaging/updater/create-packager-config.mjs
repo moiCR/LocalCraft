@@ -21,21 +21,21 @@ const config = {
   description: "A native desktop manager for local Minecraft servers.",
   homepage: "https://github.com/moiCR/LocalCraft",
   authors: ["moiCR"],
-  outDir: "target/packager",
+  outDir: "packager",
   binaries: [{ path: "../release/LocalCraft", main: true }],
   formats: windows ? ["nsis"] : ["appimage", "deb"],
   icons: windows
-    ? ["target/packager/windows-assets/localcraft.ico"]
-    : ["target/packager/linux-assets/localcraft.png"],
+    ? ["packager/windows-assets/localcraft.ico"]
+    : ["packager/linux-assets/localcraft.png"],
 };
 
 if (windows) {
   config.resources = [{
-    src: "target/packager/windows-assets/vcruntime140.dll",
+    src: "packager/windows-assets/vcruntime140.dll",
     target: "vcruntime140.dll",
   }];
   config.nsis = {
-    installerIcon: "target/packager/windows-assets/localcraft.ico",
+    installerIcon: "packager/windows-assets/localcraft.ico",
     installMode: "currentUser",
     compression: "lzma",
   };
