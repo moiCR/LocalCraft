@@ -7,17 +7,17 @@ pub struct LightTheme {
 
 impl Default for LightTheme {
     fn default() -> Self {
-        let primary_fill = rgb(0x19365f);
+        let primary_fill = rgb(0x195f36);
         Self {
             palette: Palette {
-                background: rgb(0xf0f4fa),
-                sidebar: rgb(0xf0f4fa),
+                background: rgb(0xf0faf4),
+                sidebar: rgb(0xf0faf4),
                 surface: rgb(0xffffff),
                 input_background: None,
-                surface_hover: rgb(0xe7effa),
-                border: rgb(0xd3dfee),
-                text: rgb(0x152840),
-                muted: rgb(0x516780),
+                surface_hover: rgb(0xe7faef),
+                border: rgb(0xd3eede),
+                text: rgb(0x154027),
+                muted: rgb(0x518065),
                 accent: primary_fill,
                 primary: PrimaryColors {
                     fill: primary_fill,
