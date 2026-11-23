@@ -6,4 +6,5 @@ pub mod java;
 pub mod playit;
 pub mod preferences;
 pub mod software;
+pub mod topology;
 pub mod updater;

@@ -6,7 +6,7 @@ use gpui::{
 use gpui_kit::{base::Disableable, component::scroll::ScrollableElement};
 use services::{AppState, playit::PlayitSnapshot};
 use ui::{
-    components::{Button, ButtonVariants},
+    components::{Button, ButtonVariants, card_surface},
     theme::ActiveUiTheme,
 };
 
@@ -202,36 +202,31 @@ impl Render for Playit {
                     .child(service_status),
             );
 
-        super::panel_outer(&palette).child(
-            super::panel_surface(&palette)
-                .child(
-                    div()
-                        .id("playit-scroll")
-                        .flex_1()
-                        .min_h_0()
-                        .w_full()
-                        .overflow_y_scroll()
-                        .px_5()
-                        .pt_5()
-                        .pb_12()
-                        .flex()
-                        .flex_col()
-                        .gap_5()
-                        .child(super::section_header(
-                            "Playit",
-                            "Share your server without port forwarding.",
-                            status_pill,
-                            &palette,
-                        ))
-                        .child(
-                            div()
-                                .w_full()
-                                .min_w_0()
-                                .p_4()
-                                .rounded(px(16.0))
-                                .bg(palette.card_surface())
-                                .border_1()
-                                .border_color(palette.border)
+        super::canvas_outer(&palette)
+            .child(
+                div()
+                    .id("playit-scroll")
+                    .flex_1()
+                    .min_h_0()
+                    .w_full()
+                    .overflow_y_scroll()
+                    .px_6()
+                    .pt_6()
+                    .pb_12()
+                    .flex()
+                    .flex_col()
+                    .gap_5()
+                    .child(super::section_header(
+                        "Playit",
+                        "Share your server without port forwarding.",
+                        status_pill,
+                        &palette,
+                    ))
+                    .child(
+                        card_surface(palette.surface, palette.surface_hover, palette.border)
+                            .w_full()
+                            .min_w_0()
+                            .p_5()
                                 .flex()
                                 .flex_wrap()
                                 .items_center()
@@ -248,7 +243,7 @@ impl Render for Playit {
                                             div()
                                                 .size(px(40.0))
                                                 .rounded(px(16.0))
-                                                .bg(palette.surface)
+                                                .bg(palette.card_surface())
                                                 .border_1()
                                                 .border_color(palette.border)
                                                 .flex()
@@ -365,13 +360,9 @@ impl Render for Playit {
                                 ),
                         )
                         .child(
-                            div()
+                            card_surface(palette.surface, palette.surface_hover, palette.border)
                                 .w_full()
                                 .min_w_0()
-                                .rounded(px(16.0))
-                                .bg(palette.card_surface())
-                                .border_1()
-                                .border_color(palette.border)
                                 .flex()
                                 .flex_col()
                                 .overflow_hidden()
@@ -437,7 +428,7 @@ impl Render for Playit {
                                                     .px_4()
                                                     .py_3()
                                                     .rounded(px(16.0))
-                                                    .bg(palette.surface)
+                                                    .bg(palette.card_surface())
                                                     .border_1()
                                                     .border_color(palette.border)
                                                     .flex()
@@ -486,7 +477,7 @@ impl Render for Playit {
                                                     .px_3()
                                                     .py_2()
                                                     .rounded(px(16.0))
-                                                    .bg(palette.surface)
+                                                    .bg(palette.card_surface())
                                                     .border_1()
                                                     .border_color(palette.border)
                                                     .flex()
@@ -530,15 +521,11 @@ impl Render for Playit {
                                 ),
                         )
                         .child(
-                            div()
+                            card_surface(palette.surface, palette.surface_hover, palette.border)
                                 .w_full()
                                 .min_w_0()
                                 .min_h_0()
                                 .h(px(260.0))
-                                .rounded(px(16.0))
-                                .bg(palette.card_surface())
-                                .border_1()
-                                .border_color(palette.border)
                                 .flex()
                                 .flex_col()
                                 .overflow_hidden()
@@ -609,10 +596,9 @@ impl Render for Playit {
                                     .child("Playit downloads and documentation"),
                             ),
                         ),
-                )
-                .child(super::top_scroll_fade(palette.surface))
-                .child(super::bottom_scroll_fade(palette.surface)),
-        )
+            )
+            .child(super::top_scroll_fade(palette.background))
+            .child(super::bottom_scroll_fade(palette.background))
     }
 }
 

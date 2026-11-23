@@ -10,7 +10,7 @@ use smol::Timer;
 use std::{path::PathBuf, process::Stdio, time::Duration};
 use tokio::sync::watch;
 use ui::{
-    components::{Button, ButtonVariants, ProgressBar},
+    components::{Button, ButtonVariants, ProgressBar, card_surface},
     theme::{ActiveUiTheme, Palette},
 };
 
@@ -222,38 +222,33 @@ impl Render for Runtimes {
                 .collect()
         };
 
-        super::panel_outer(&palette).child(
-            super::panel_surface(&palette)
-                .child(
-                    div()
-                        .id("runtimes-scroll")
-                        .flex_1()
-                        .min_h_0()
-                        .w_full()
-                        .overflow_y_scroll()
-                        .px_5()
-                        .pt_5()
-                        .pb_12()
-                        .flex()
-                        .flex_col()
-                        .gap_5()
-                        .child(super::section_header(
-                            "Java Runtimes",
-                            "Install and manage Java installations shared across server instances.",
-                            super::count_badge(count, &palette),
-                            &palette,
-                        ))
-                        .child(
-                            div()
-                                .w_full()
-                                .flex()
-                                .flex_col()
-                                .gap_4()
-                                .p_4()
-                                .rounded(px(16.0))
-                                .bg(palette.card_surface())
-                                .border_1()
-                                .border_color(palette.border)
+        super::canvas_outer(&palette)
+            .child(
+                div()
+                    .id("runtimes-scroll")
+                    .flex_1()
+                    .min_h_0()
+                    .w_full()
+                    .overflow_y_scroll()
+                    .px_6()
+                    .pt_6()
+                    .pb_12()
+                    .flex()
+                    .flex_col()
+                    .gap_5()
+                    .child(super::section_header(
+                        "Java Runtimes",
+                        "Install and manage Java installations shared across server instances.",
+                        super::count_badge(count, &palette),
+                        &palette,
+                    ))
+                    .child(
+                        card_surface(palette.surface, palette.surface_hover, palette.border)
+                            .w_full()
+                            .flex()
+                            .flex_col()
+                            .gap_4()
+                            .p_5()
                                 .child(
                                     div()
                                         .flex()
@@ -384,10 +379,9 @@ impl Render for Runtimes {
                                 }),
                         )
                         .child(div().flex().flex_col().gap_3().children(list_content)),
-                )
-                .child(super::top_scroll_fade(palette.surface))
-                .child(super::bottom_scroll_fade(palette.surface)),
-        )
+            )
+            .child(super::top_scroll_fade(palette.background))
+            .child(super::bottom_scroll_fade(palette.background))
     }
 }
 

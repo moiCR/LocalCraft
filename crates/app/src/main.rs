@@ -38,9 +38,7 @@ fn main() {
         .use_pages()
         .run_with(move |cx: &mut App| {
             let appearance = state.theme_manager.appearance();
-            let collapsed = state.preferences.sidebar_collapsed;
             cx.set_global(state);
-            cx.set_global(layout::SidebarState { collapsed });
             gpui_kit::init(cx);
             ui::theme::sync_component_theme(appearance, cx);
             ui::components::input::init(cx);

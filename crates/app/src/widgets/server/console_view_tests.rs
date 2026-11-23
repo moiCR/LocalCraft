@@ -48,6 +48,9 @@ fn initialize(cx: &mut TestAppContext) -> anyhow::Result<tokio::runtime::Runtime
         preferences: Default::default(),
         preferences_store: Default::default(),
         preferences_revision: std::sync::atomic::AtomicU64::new(0),
+        topology: Default::default(),
+        topology_store: Default::default(),
+        topology_revision: std::sync::atomic::AtomicU64::new(0),
     });
     Ok(runtime)
 }

@@ -23,12 +23,6 @@ pub struct CreateServerModalState {
 
 impl Global for CreateServerModalState {}
 
-impl CreateServerModalState {
-    pub fn is_open(&self) -> bool {
-        self.form.is_some()
-    }
-}
-
 enum Update {
     Progress(String),
     Done(Result<ServerInstance, String>),

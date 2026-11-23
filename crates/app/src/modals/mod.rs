@@ -6,6 +6,6 @@ pub mod server_settings;
 pub mod settings;
 pub mod settings_preferences;
 
-pub use create_server::{CreateServerModal, CreateServerModalState};
-pub use delete_instance::{DeleteInstanceModal, DeleteInstanceModalState};
+pub use create_server::CreateServerModal;
+pub use delete_instance::DeleteInstanceModal;
 pub use settings::{SettingsModal, SettingsModalState, SettingsTab};

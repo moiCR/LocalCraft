@@ -10,6 +10,7 @@ use crate::{
     playit::PlayitService,
     preferences::{AppPreferences, PreferencesStore},
     software::SoftwareService,
+    topology::{SpatialTopology, TopologyStore},
 };
 
 pub struct AppState {
@@ -22,6 +23,9 @@ pub struct AppState {
     pub preferences: AppPreferences,
     pub preferences_store: PreferencesStore,
     pub preferences_revision: AtomicU64,
+    pub topology: SpatialTopology,
+    pub topology_store: TopologyStore,
+    pub topology_revision: AtomicU64,
 }
 
 impl gpui::Global for AppState {}
@@ -31,6 +35,7 @@ impl AppState {
         let background_runtime = tokio::runtime::Handle::try_current()
             .context("AppState must be initialized on the Tokio runtime")?;
         let (preferences, preferences_store) = PreferencesStore::load().await;
+        let (topology, topology_store) = TopologyStore::load().await;
         let java_service = Arc::new(JavaService::new());
         java_service.load().await?;
         let mut theme_manager = ThemeManager::default();
@@ -49,6 +54,9 @@ impl AppState {
             preferences,
             preferences_store,
             preferences_revision: AtomicU64::new(0),
+            topology,
+            topology_store,
+            topology_revision: AtomicU64::new(0),
         })
     }
 
@@ -62,6 +70,20 @@ impl AppState {
         self.background_runtime.spawn(async move {
             if let Err(error) = store.save(preferences, revision).await {
                 eprintln!("Could not save application preferences: {error:#}");
+            }
+        });
+    }
+
+    pub fn save_topology(&self) {
+        let revision = self
+            .topology_revision
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1);
+        let topology = self.topology.clone();
+        let store = self.topology_store.clone();
+        self.background_runtime.spawn(async move {
+            if let Err(error) = store.save(topology, revision).await {
+                eprintln!("Could not save spatial topology: {error:#}");
             }
         });
     }

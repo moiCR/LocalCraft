@@ -1,10 +1,11 @@
 pub mod playit;
 pub mod runtimes;
 pub mod servers;
+mod spatial_canvas;
 
 use gpui::{
-    App, AppContext, Div, Entity, FontWeight, Global, IntoElement, Rgba, div, linear_color_stop,
-    linear_gradient, prelude::*, px,
+    App, AppContext, Div, Entity, FontWeight, Global, IntoElement, Rgba, SharedString, div,
+    linear_color_stop, linear_gradient, prelude::*, px,
 };
 use ui::theme::Palette;
 
@@ -29,29 +30,17 @@ impl AppViews {
     }
 }
 
-pub(super) fn panel_outer(palette: &Palette) -> Div {
-    div()
-        .flex()
-        .flex_col()
-        .size_full()
-        .bg(palette.background)
-        .text_color(palette.text)
-        .p_5()
-}
-
-pub(super) fn panel_surface(palette: &Palette) -> Div {
+pub(super) fn canvas_outer(palette: &Palette) -> Div {
     div()
         .relative()
         .flex()
         .flex_col()
-        .flex_1()
+        .size_full()
         .min_h_0()
-        .w_full()
-        .rounded(px(16.0))
-        .bg(palette.surface)
-        .border_1()
-        .border_color(palette.border)
+        .min_w_0()
         .overflow_hidden()
+        .bg(palette.background)
+        .text_color(palette.text)
 }
 
 pub(super) fn top_scroll_fade(surface: Rgba) -> Div {
@@ -84,7 +73,7 @@ pub(super) fn bottom_scroll_fade(surface: Rgba) -> Div {
 
 pub(super) fn section_header(
     title: &'static str,
-    description: &'static str,
+    description: impl Into<SharedString>,
     right: impl IntoElement,
     palette: &Palette,
 ) -> Div {
@@ -107,7 +96,12 @@ pub(super) fn section_header(
                         .text_color(palette.text)
                         .child(title),
                 )
-                .child(div().text_xs().text_color(palette.muted).child(description)),
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(palette.muted)
+                        .child(description.into()),
+                ),
         )
         .child(right)
 }
