@@ -4,7 +4,6 @@ version = "1.0.0"
 edition = "2024"
 description = "A native desktop manager for local Minecraft servers."
 authors = ["moiCR"]
-homepage = "https://github.com/moiCR/LocalCraft"
 repository = "https://github.com/moiCR/LocalCraft"
 
 [package.metadata.packager]
