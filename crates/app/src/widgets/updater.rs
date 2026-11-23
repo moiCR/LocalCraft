@@ -1,7 +1,26 @@
-use gpui::{Context, IntoElement, Render, Window, div, prelude::*, px, svg};
-use gpui_kit::component::scroll::ScrollableElement;
+use gpui::{
+    App, AppContext, Context, Entity, Global, IntoElement, Render, Window, div, prelude::*, px, svg,
+};
+use gpui_kit::{base::Disableable, component::scroll::ScrollableElement};
 use services::{AppState, updater::UpdaterService};
-use ui::theme::Palette;
+use ui::{
+    components::{Button, ButtonVariants},
+    theme::ActiveUiTheme,
+};
+
+#[derive(Clone)]
+pub struct AppUpdater(pub Entity<Updater>);
+
+impl Global for AppUpdater {}
+
+impl AppUpdater {
+    pub fn init(cx: &mut App) {
+        if cx.try_global::<Self>().is_none() {
+            let updater = cx.new(Updater::new);
+            cx.set_global(Self(updater));
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum UpdateStatus {
@@ -132,74 +151,107 @@ impl Updater {
 
 impl Render for Updater {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let palette = cx.global::<AppState>().theme_manager.palette();
-        let label = match self.status {
+        let palette = cx.ui_palette();
+        let button_label = match self.status {
             UpdateStatus::Idle | UpdateStatus::Error => "Check for updates".to_owned(),
             UpdateStatus::Checking => "Checking…".into(),
             UpdateStatus::Available => self
                 .version()
-                .map(|version| format!("Install update v{version}"))
+                .map(|version| format!("Install v{version}"))
                 .unwrap_or_else(|| "Install update".into()),
-            UpdateStatus::Downloading => "Downloading update…".into(),
-            UpdateStatus::UpToDate => "LocalCraft is up to date".into(),
+            UpdateStatus::Downloading => "Updating…".into(),
+            UpdateStatus::UpToDate => "Check again".into(),
+        };
+        let description = match self.status {
+            UpdateStatus::Idle => format!(
+                "Current version v{}. Check GitHub for new releases.",
+                env!("CARGO_PKG_VERSION")
+            ),
+            UpdateStatus::Checking => "Checking for available updates…".to_owned(),
+            UpdateStatus::Available => self
+                .version()
+                .map(|version| format!("Version v{version} is ready to install."))
+                .unwrap_or_else(|| "A new update is available.".to_owned()),
+            UpdateStatus::Downloading => "Downloading and installing update…".to_owned(),
+            UpdateStatus::UpToDate => {
+                format!("LocalCraft v{} is up to date.", env!("CARGO_PKG_VERSION"))
+            }
+            UpdateStatus::Error => "Could not complete update check.".to_owned(),
         };
         let busy = matches!(
             self.status,
             UpdateStatus::Checking | UpdateStatus::Downloading
         );
+        let available = self.status == UpdateStatus::Available;
+        let button = Button::new("check-app-updates")
+            .label(button_label)
+            .rounded(px(16.0))
+            .h(px(32.0))
+            .disabled(busy)
+            .on_click(cx.listener(|this, _, _, cx| this.activate(cx)));
+        let button = if available { button.primary() } else { button };
 
         div()
-            .border_t_1()
-            .border_color(palette.border)
-            .pt_4()
             .flex()
             .flex_col()
             .gap_3()
-            .child(
-                div().flex().flex_col().gap_1().child("Updates").child(
-                    div()
-                        .text_sm()
-                        .text_color(palette.muted)
-                        .child("Keep LocalCraft up to date."),
-                ),
-            )
+            .rounded(px(16.0))
+            .bg(palette.card_surface())
+            .border_1()
+            .border_color(palette.border)
+            .px_4()
+            .py_3()
             .child(
                 div()
-                    .id("check-app-updates")
                     .flex()
                     .items_center()
-                    .gap_2()
-                    .px_3()
-                    .py_2()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(palette.border)
-                    .when(!busy, |button| button.cursor_pointer())
-                    .when(!busy, |button| {
-                        button.hover(|style| style.bg(palette.surface))
-                    })
-                    .when(!busy, |button| {
-                        button.on_click(cx.listener(|this, _, _, cx| this.activate(cx)))
-                    })
+                    .justify_between()
+                    .gap_4()
                     .child(
-                        svg()
-                            .path(if busy {
-                                "icons/loader.svg"
-                            } else if self.status == UpdateStatus::Available {
-                                "icons/download.svg"
-                            } else {
-                                "icons/refresh-ccw.svg"
-                            })
-                            .size_4()
-                            .text_color(palette.muted),
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .gap_0p5()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(
+                                        svg()
+                                            .path(if busy {
+                                                "icons/loader.svg"
+                                            } else if available {
+                                                "icons/download.svg"
+                                            } else {
+                                                "icons/refresh-ccw.svg"
+                                            })
+                                            .size_3p5()
+                                            .text_color(if available {
+                                                palette.accent
+                                            } else {
+                                                palette.muted
+                                            }),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Updates"),
+                                    ),
+                            )
+                            .child(div().text_xs().text_color(palette.muted).child(description)),
                     )
-                    .child(div().text_color(palette.text).child(label)),
+                    .child(button),
             )
             .when_some(self.error.as_ref(), |element, error| {
                 element.child(
                     div()
                         .text_xs()
-                        .text_color(palette.accent)
+                        .text_color(palette.error)
                         .child(error.clone()),
                 )
             })
@@ -210,7 +262,10 @@ impl Render for Updater {
                 |element, notes| {
                     element.child(
                         div()
-                            .max_h(px(72.))
+                            .border_t_1()
+                            .border_color(palette.border)
+                            .pt_2p5()
+                            .max_h(px(140.))
                             .overflow_y_scrollbar()
                             .text_xs()
                             .text_color(palette.muted)
@@ -219,44 +274,4 @@ impl Render for Updater {
                 },
             )
     }
-}
-
-pub fn titlebar_control(
-    layout: &crate::pages::layout::RootLayout,
-    palette: &Palette,
-    cx: &Context<crate::pages::layout::RootLayout>,
-) -> impl IntoElement {
-    let status = layout.updater.read(cx).status();
-    let show = matches!(
-        status,
-        UpdateStatus::Available
-            | UpdateStatus::Checking
-            | UpdateStatus::Downloading
-            | UpdateStatus::Error
-    );
-    div().id("titlebar-update").when(show, |control| {
-        control
-            .w(px(36.))
-            .h(px(32.))
-            .flex()
-            .items_center()
-            .justify_center()
-            .rounded_md()
-            .cursor_pointer()
-            .hover(|style| style.bg(palette.surface))
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.updater.update(cx, |updater, cx| updater.activate(cx));
-            }))
-            .child(
-                svg()
-                    .path(match status {
-                        UpdateStatus::Available => "icons/download.svg",
-                        UpdateStatus::Checking | UpdateStatus::Downloading => "icons/loader.svg",
-                        UpdateStatus::Error => "icons/refresh-ccw.svg",
-                        UpdateStatus::Idle | UpdateStatus::UpToDate => "icons/refresh-ccw.svg",
-                    })
-                    .size_4()
-                    .text_color(palette.text),
-            )
-    })
 }

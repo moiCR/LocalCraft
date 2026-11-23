@@ -20,6 +20,7 @@ pub struct AppPreferences {
     pub console_timestamps: bool,
     pub console_auto_scroll: bool,
     pub sidebar_collapsed: bool,
+    pub navigation_style: String,
 }
 
 impl Default for AppPreferences {
@@ -32,6 +33,7 @@ impl Default for AppPreferences {
             console_timestamps: false,
             console_auto_scroll: true,
             sidebar_collapsed: false,
+            navigation_style: "classic".into(),
         }
     }
 }
@@ -51,6 +53,9 @@ impl AppPreferences {
             .is_some_and(|version| ![8, 17, 21, 25].contains(&version))
         {
             self.default_java_major = None;
+        }
+        if self.navigation_style != "dock" {
+            self.navigation_style = "classic".into();
         }
     }
 }

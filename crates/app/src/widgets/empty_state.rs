@@ -1,53 +1,74 @@
-use gpui::{Div, IntoElement, div, prelude::*, px, svg};
+use gpui::{Div, FontWeight, IntoElement, SharedString, div, prelude::*, px, svg};
 use ui::theme::Palette;
 
 pub fn render_icon(
     icon_path: &'static str,
-    title: &'static str,
-    description: &'static str,
+    title: impl Into<SharedString>,
+    description: impl Into<SharedString>,
     palette: &Palette,
 ) -> Div {
-    render_with_icon(
-        svg().path(icon_path).size_6().text_color(palette.accent),
-        title,
-        description,
-        palette,
-    )
+    base(icon_path, title, description, palette)
 }
 
-fn render_with_icon(
-    icon: impl IntoElement,
-    title: &'static str,
-    description: &'static str,
+pub fn render_icon_with_action(
+    icon_path: &'static str,
+    title: impl Into<SharedString>,
+    description: impl Into<SharedString>,
+    palette: &Palette,
+    action: impl IntoElement,
+) -> Div {
+    base(icon_path, title, description, palette).child(div().pt_1().child(action))
+}
+
+fn base(
+    icon_path: &'static str,
+    title: impl Into<SharedString>,
+    description: impl Into<SharedString>,
     palette: &Palette,
 ) -> Div {
     div()
-        .flex_1()
+        .w_full()
+        .py_12()
+        .px_6()
+        .rounded(px(16.0))
+        .bg(palette.card_surface())
+        .border_1()
+        .border_color(palette.border)
         .flex()
         .flex_col()
         .items_center()
         .justify_center()
+        .text_center()
         .gap_3()
-        .border_1()
-        .border_color(palette.border)
-        .rounded_md()
-        .p_8()
         .child(
             div()
-                .size(px(56.))
-                .rounded_md()
+                .size(px(44.0))
+                .rounded(px(16.0))
                 .bg(palette.surface)
+                .border_1()
+                .border_color(palette.border)
                 .flex()
                 .items_center()
                 .justify_center()
-                .child(icon),
+                .child(
+                    svg()
+                        .path(icon_path)
+                        .size(px(20.0))
+                        .text_color(palette.muted),
+                ),
         )
-        .child(div().mt_3().text_lg().child(title))
         .child(
             div()
-                .max_w(px(360.))
-                .text_center()
+                .text_sm()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(palette.text)
+                .child(title.into()),
+        )
+        .child(
+            div()
+                .max_w(px(360.0))
+                .text_xs()
                 .text_color(palette.muted)
-                .child(description),
+                .child(description.into()),
         )
 }

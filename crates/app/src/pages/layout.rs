@@ -1,75 +1,36 @@
 use gpui::{
-    AnyView, AppContext, Context, FocusHandle, IntoElement, Subscription, Window, div, prelude::*,
+    AnimationExt, AnyView, Context, FocusHandle, IntoElement, SpringAnimation, SpringConfig,
+    Window, div, prelude::*, px,
 };
 use gpui_pages::PageLayout;
 use services::AppState;
+use ui::theme::ActiveUiTheme;
 
 use crate::{
-    modals::settings,
+    layout::{
+        NavigationStyle, SidebarState,
+        sidebar::{Dock, Sidebar},
+        titlebar::{Titlebar, resize_handles},
+        toggle_sidebar,
+    },
+    modals::{CreateServerModal, DeleteInstanceModal, SettingsModal},
     views::AppViews,
-    widgets::{sidebar, titlebar},
+    widgets::updater::AppUpdater,
 };
 
 pub struct RootLayout {
     child: AnyView,
-    pub sidebar_motion: crate::shell::SidebarMotion,
-    pub settings_open: bool,
-    pub settings_focus: FocusHandle,
-    pub settings_preferences: gpui::Entity<crate::modals::settings_preferences::SettingsPreferences>,
-    pub updater: gpui::Entity<crate::widgets::updater::Updater>,
-    sidebar_collapsed_setting: bool,
-    previous_focus: Option<FocusHandle>,
-    _updater_subscription: Subscription,
-}
-
-impl RootLayout {
-    pub fn open_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.previous_focus = window.focused(cx);
-        self.settings_open = true;
-        window.focus(&self.settings_focus, cx);
-        cx.notify();
-    }
-
-    pub fn close_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.settings_open = false;
-        if let Some(focus) = self.previous_focus.take() {
-            window.focus(&focus, cx);
-        } else {
-            window.blur(cx);
-        }
-        cx.notify();
-    }
 }
 
 impl PageLayout for RootLayout {
     fn new(child: AnyView, cx: &mut Context<Self>) -> Self {
         AppViews::init(cx);
-        let sidebar_collapsed_setting = cx.global::<AppState>().preferences.sidebar_collapsed;
-        let updater = cx.new(crate::widgets::updater::Updater::new);
-        let updater_subscription = cx.observe(&updater, |_, _, cx| cx.notify());
-        cx.observe_global::<AppState>(|this, cx| {
-            let collapsed = cx.global::<AppState>().preferences.sidebar_collapsed;
-            if this.sidebar_collapsed_setting != collapsed {
-                this.sidebar_collapsed_setting = collapsed;
-                this.sidebar_motion.set_visible(!collapsed);
-            }
-            cx.notify();
-        })
-        .detach();
-        Self {
-            child,
-            sidebar_motion: crate::shell::SidebarMotion::with_visibility(
-                !sidebar_collapsed_setting,
-            ),
-            settings_open: false,
-            settings_focus: cx.focus_handle(),
-            settings_preferences: cx
-                .new(crate::modals::settings_preferences::SettingsPreferences::new),
-            updater,
-            sidebar_collapsed_setting,
-            previous_focus: None,
-            _updater_subscription: updater_subscription,
+        AppUpdater::init(cx);
+        let collapsed = cx.global::<AppState>().preferences.sidebar_collapsed;
+        if cx.try_global::<SidebarState>().is_none() {
+            cx.set_global(SidebarState { collapsed });
         }
+        Self { child }
     }
 
     fn set_child(&mut self, child: AnyView) {
@@ -77,40 +38,97 @@ impl PageLayout for RootLayout {
     }
 
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
+        let dock = NavigationStyle::from_key(&cx.global::<AppState>().preferences.navigation_style)
+            == NavigationStyle::Dock;
+        let collapsed = cx
+            .try_global::<SidebarState>()
+            .map(|state| state.collapsed)
+            .unwrap_or(false);
+
+        let focus_handle: FocusHandle = window
+            .use_keyed_state("app-layout-focus", cx, |window, cx| {
+                let handle = cx.focus_handle();
+                let initial_focus = handle.clone();
+                window.defer(cx, move |window, cx| {
+                    if window.focused(cx).is_none() {
+                        window.focus(&initial_focus, cx);
+                    }
+                });
+                handle
+            })
+            .read(cx)
+            .clone();
+
+        let spring_config = SpringConfig::new(200.0, 24.0, 1.0);
+        let collapse_spring = SpringAnimation::new(spring_config).to(!collapsed);
+
         div()
             .relative()
+            .track_focus(&focus_handle)
+            .key_context("AppLayout")
+            .on_key_down(move |event, window, cx| {
+                if !dock
+                    && event.keystroke.modifiers.control
+                    && event.keystroke.key.eq_ignore_ascii_case("b")
+                {
+                    toggle_sidebar(window, cx);
+                    cx.stop_propagation();
+                } else if event.keystroke.modifiers.control
+                    && event.keystroke.key.eq_ignore_ascii_case("n")
+                {
+                    CreateServerModal::open(window, cx);
+                    cx.stop_propagation();
+                }
+            })
             .flex()
             .flex_col()
             .size_full()
-            .bg(palette.background)
-            .text_color(palette.text)
             .font_family("Geist")
             .text_sm()
-            .child(titlebar::render(self, window, cx))
+            .bg(palette.background)
+            .text_color(palette.text)
+            .child(Titlebar::new().sidebar_toggle(!dock))
             .child(
                 div()
-                    .relative()
                     .flex()
+                    .flex_row()
                     .flex_1()
                     .min_h_0()
                     .w_full()
-                    .child(sidebar::panel(self, window, cx))
+                    .children((!dock).then(|| {
+                        div()
+                            .id("sidebar-container")
+                            .overflow_hidden()
+                            .h_full()
+                            .child(Sidebar)
+                            .with_spring(
+                                "sidebar-collapse-animation",
+                                collapse_spring,
+                                move |this, phase| {
+                                    let width = phase.interpolate_clamped(px(0.0), px(200.0));
+                                    this.w(width)
+                                },
+                            )
+                    }))
                     .child(
                         div()
+                            .flex()
                             .flex_1()
                             .min_w_0()
                             .min_h_0()
                             .size_full()
+                            .overflow_hidden()
                             .child(self.child.clone()),
-                    )
-                    .when(self.settings_open, |element| {
-                        element.child(settings::render(self, cx))
-                    }),
+                    ),
             )
+            .children(dock.then_some(Dock))
+            .child(SettingsModal::new())
+            .child(CreateServerModal::new())
+            .child(DeleteInstanceModal::new())
             .when(
                 !window.is_maximized() && !window.is_fullscreen(),
-                |element| element.child(titlebar::resize_handles()),
+                |element| element.child(resize_handles()),
             )
     }
 }

@@ -1,5 +1,6 @@
-use gpui::AppContext;
-use gpui::{Context, Entity, EventEmitter, FocusHandle, Subscription};
+use std::time::Duration;
+
+use gpui::*;
 use services::{
     AppState,
     instance::{ServerInstance, configuration::CreateServer},
@@ -11,40 +12,53 @@ use ui::components::{
     select::{Select, Selected},
 };
 
+use crate::views::AppViews;
+
 pub const SOFTWARE: [&str; 6] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"];
 
-pub enum CreationEvent {
-    Created(ServerInstance),
-    Close,
+#[derive(Default)]
+pub struct CreateServerModalState {
+    form: Option<Entity<CreateServerForm>>,
 }
+
+impl Global for CreateServerModalState {}
+
+impl CreateServerModalState {
+    pub fn is_open(&self) -> bool {
+        self.form.is_some()
+    }
+}
+
 enum Update {
     Progress(String),
     Done(Result<ServerInstance, String>),
 }
 
-pub struct CreateServerModal {
+pub struct CreateServerForm {
     pub name: Entity<Input>,
     pub ram: Entity<Input>,
     pub port: Entity<Input>,
     pub software: Entity<Select>,
     pub version: Entity<Select>,
     pub java: Entity<Select>,
-    pub focus: FocusHandle,
     pub accepted_eula: bool,
     pub busy: bool,
+    pub closing: bool,
     pub loading: bool,
     pub status: Option<String>,
     pub error: Option<String>,
     pub latest_build: Option<BuildOption>,
+    pub scroll: ScrollHandle,
     generation: u64,
     _subscriptions: Vec<Subscription>,
 }
-impl EventEmitter<CreationEvent> for CreateServerModal {}
 
-impl CreateServerModal {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+impl CreateServerForm {
+    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let preferences = cx.global::<AppState>().preferences.clone();
         let name = cx.new(|cx| Input::new("", "My Minecraft server", cx));
+        let name_focus = name.read(cx).focus_handle(cx);
+        window.focus(&name_focus, cx);
         let ram = cx.new(|cx| Input::new(preferences.default_ram_mib.to_string(), "MiB", cx));
         let port = cx.new(|cx| Input::new("25565", "Port", cx));
         let software = cx.new(|cx| Select::new("Choose software", cx));
@@ -69,19 +83,21 @@ impl CreateServerModal {
             software,
             version,
             java,
-            focus: cx.focus_handle(),
             accepted_eula: false,
             busy: false,
+            closing: false,
             loading: false,
             status: None,
             error: None,
             latest_build: None,
+            scroll: ScrollHandle::new(),
             generation: 0,
             _subscriptions: subscriptions,
         };
         modal.fetch_versions(cx);
         modal
     }
+
     pub fn fetch_versions(&mut self, cx: &mut Context<Self>) {
         if self.busy {
             return;
@@ -131,6 +147,7 @@ impl CreateServerModal {
         .detach();
         cx.notify();
     }
+
     pub fn fetch_builds(&mut self, cx: &mut Context<Self>) {
         if self.busy {
             return;
@@ -201,7 +218,8 @@ impl CreateServerModal {
         .detach();
         cx.notify();
     }
-    fn specification(&self, cx: &gpui::App) -> Result<CreateServer, String> {
+
+    fn specification(&self, cx: &App) -> Result<CreateServer, String> {
         let get = |select: &Entity<Select>| {
             select
                 .read(cx)
@@ -247,8 +265,9 @@ impl CreateServerModal {
         specification.validate().map_err(|e| e.to_string())?;
         Ok(specification)
     }
-    pub fn create(&mut self, cx: &mut Context<Self>) {
-        if self.busy || self.loading {
+
+    pub fn create(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.busy || self.loading || self.closing {
             return;
         }
         let specification = match self.specification(cx) {
@@ -289,9 +308,13 @@ impl CreateServerModal {
         let java = cx.global::<AppState>().java_service.clone();
         let (tx, mut rx) = tokio::sync::mpsc::channel(8);
         cx.global::<AppState>().background_runtime.spawn(async move {
-            let (java_tx, mut java_rx) = tokio::sync::watch::channel(JavaProgress::new(specification.java.unwrap_or_default()));
+            let (java_tx, mut java_rx) =
+                tokio::sync::watch::channel(JavaProgress::new(specification.java.unwrap_or_default()));
             let (download_tx, mut download_rx) = tokio::sync::watch::channel(DownloadProgress {
-                instance_id: String::new(), stage: DownloadStage::Resolving, downloaded: 0, total: None,
+                instance_id: String::new(),
+                stage: DownloadStage::Resolving,
+                downloaded: 0,
+                total: None,
             });
             let operation = specification.create(java, &java_tx, &download_tx);
             tokio::pin!(operation);
@@ -313,28 +336,48 @@ impl CreateServerModal {
                 }
             }
         });
-        cx.spawn(async move |this, cx| {
+        cx.spawn_in(window, async move |this, cx| {
             while let Some(update) = rx.recv().await {
                 if this
-                    .update(cx, |this, cx| {
-                        match update {
-                            Update::Progress(status) => this.status = Some(status),
-                            Update::Done(result) => {
-                                this.busy = false;
-                                this.status = None;
-                                for select in [&this.software, &this.version, &this.java] {
-                                    select.update(cx, |s, cx| {
-                                        s.enabled = true;
-                                        cx.notify();
+                    .update_in(cx, |this, window, cx| match update {
+                        Update::Progress(status) => {
+                            this.status = Some(status);
+                            cx.notify();
+                        }
+                        Update::Done(result) => {
+                            this.busy = false;
+                            this.status = None;
+                            for input in [&this.name, &this.ram, &this.port] {
+                                input.update(cx, |input, cx| {
+                                    input.enabled = true;
+                                    cx.notify();
+                                });
+                            }
+                            for select in [&this.software, &this.version, &this.java] {
+                                select.update(cx, |s, cx| {
+                                    s.enabled = true;
+                                    cx.notify();
+                                });
+                            }
+                            match result {
+                                Ok(server) => {
+                                    cx.update_global::<AppState, _>(|state, _| {
+                                        state.instance_service.insert(server.clone());
                                     });
+                                    if let Some(views) = cx.try_global::<AppViews>() {
+                                        let servers = views.servers.clone();
+                                        servers.update(cx, |this, cx| {
+                                            this.open_created_server(server, cx);
+                                        });
+                                    }
+                                    this.close(window, cx);
                                 }
-                                match result {
-                                    Ok(server) => cx.emit(CreationEvent::Created(server)),
-                                    Err(error) => this.error = Some(error),
+                                Err(error) => {
+                                    this.error = Some(error);
+                                    cx.notify();
                                 }
                             }
                         }
-                        cx.notify();
                     })
                     .is_err()
                 {
@@ -345,9 +388,64 @@ impl CreateServerModal {
         .detach();
         cx.notify();
     }
-    pub fn close(&self, cx: &mut Context<Self>) {
-        if !self.busy {
-            cx.emit(CreationEvent::Close);
+
+    pub fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.busy || self.closing {
+            return;
         }
+        self.closing = true;
+        cx.notify();
+        cx.spawn_in(window, async move |this, cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(280))
+                .await;
+            let _ = this.update_in(cx, |_, window, cx| {
+                cx.update_global::<CreateServerModalState, _>(|state, _| state.form = None);
+                window.blur(cx);
+                window.refresh();
+            });
+        })
+        .detach();
+    }
+}
+
+#[derive(IntoElement)]
+pub struct CreateServerModal;
+
+impl CreateServerModal {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn open(window: &mut Window, cx: &mut App) {
+        if let Some(form) = cx
+            .try_global::<CreateServerModalState>()
+            .and_then(|state| state.form.clone())
+        {
+            let focus = form.read(cx).name.read(cx).focus_handle(cx);
+            window.focus(&focus, cx);
+            return;
+        }
+        let form = cx.new(|cx| CreateServerForm::new(window, cx));
+        if cx.try_global::<CreateServerModalState>().is_none() {
+            cx.set_global(CreateServerModalState::default());
+        }
+        cx.update_global::<CreateServerModalState, _>(|state, _| state.form = Some(form));
+        window.refresh();
+    }
+}
+
+impl Default for CreateServerModal {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RenderOnce for CreateServerModal {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        div().absolute().inset_0().size_full().children(
+            cx.try_global::<CreateServerModalState>()
+                .and_then(|state| state.form.clone()),
+        )
     }
 }

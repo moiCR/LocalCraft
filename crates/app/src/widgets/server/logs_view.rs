@@ -3,6 +3,7 @@ use gpui::{
     Window, div, prelude::*, px, uniform_list,
 };
 use services::{AppState, instance::ServerInstance};
+use ui::{components::IconButton, theme::ActiveUiTheme};
 
 const LOG_CAPACITY: usize = 5_000;
 const LOG_ROW_HEIGHT: f32 = 22.;
@@ -99,7 +100,7 @@ impl LogsView {
 impl Render for LogsView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let entity = cx.entity();
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         let scroll = self.scroll.clone();
         div()
             .flex()
@@ -120,13 +121,8 @@ impl Render for LogsView {
                             .child("INSTANCE LOG"),
                     )
                     .child(
-                        div()
-                            .id("refresh-server-logs")
-                            .text_xs()
-                            .text_color(palette.muted)
-                            .cursor_pointer()
-                            .hover(|style| style.text_color(palette.text))
-                            .child("Refresh")
+                        IconButton::new("refresh-server-logs", "icons/refresh-ccw.svg")
+                            .tooltip("Refresh logs")
                             .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
                     ),
             )
@@ -137,8 +133,10 @@ impl Render for LogsView {
                     .min_h_0()
                     .w_full()
                     .overflow_hidden()
-                    .bg(palette.sidebar)
-                    .rounded_md()
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .rounded(px(16.0))
                     .when(self.loading, |element| {
                         element.flex().items_center().justify_center().child(
                             div()

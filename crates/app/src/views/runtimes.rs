@@ -1,6 +1,6 @@
 use gpui::{
-    Animation, AnimationExt, Context, Div, IntoElement, Render, Window, div, ease_out_quint,
-    prelude::*,
+    Animation, AnimationExt, Context, Div, FontWeight, IntoElement, Render, Window, div,
+    ease_out_quint, prelude::*, px,
 };
 use services::{
     AppState,
@@ -9,6 +9,10 @@ use services::{
 use smol::Timer;
 use std::{path::PathBuf, process::Stdio, time::Duration};
 use tokio::sync::watch;
+use ui::{
+    components::{Button, ButtonVariants, ProgressBar},
+    theme::{ActiveUiTheme, Palette},
+};
 
 use crate::widgets::{empty_state, runtime_item::RuntimeItem};
 
@@ -174,9 +178,8 @@ impl Runtimes {
 
 impl Render for Runtimes {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let workspace = self;
+        let palette = cx.ui_palette();
         let state = cx.global::<AppState>();
-        let palette = state.theme_manager.palette();
         let installations = match state.java_service.installations().read() {
             Ok(installations) => {
                 let mut installations: Vec<_> = installations.values().cloned().collect();
@@ -185,203 +188,246 @@ impl Render for Runtimes {
             }
             Err(_) => Vec::new(),
         };
-        let count = format!("{} runtimes", installations.len());
+        let count = if installations.len() == 1 {
+            "1 runtime".to_owned()
+        } else {
+            format!("{} runtimes", installations.len())
+        };
 
-        super::page(
-        "Runtimes",
-        "Java installations for your Minecraft servers.",
-        count,
-        palette,
-    )
-    .child(
-        div()
-            .flex()
-            .flex_col()
-            .gap_5()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .p_5()
-                    .rounded_lg()
-                    .border_1()
-                    .border_color(palette.border)
-                    .bg(palette.surface)
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .child("Install Java runtime"),
-                    )
-                    .child(div().text_sm().text_color(palette.muted).child(
-                        "Choose a major version. Installed versions are shared between instances.",
-                    ))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .flex_wrap()
-                            .gap_2()
-                            .children([8_u8, 17, 21, 25].into_iter().map(|version| {
-                                let selected = workspace.runtime_version == version;
-                                div()
-                                    .id(("java-version", version as u32))
-                                    .px_3()
-                                    .py_2()
-                                    .rounded_md()
-                                    .border_1()
-                                    .border_color(if selected {
-                                        palette.text
-                                    } else {
-                                        palette.border
-                                    })
-                                    .bg(if selected {
-                                        palette.background
-                                    } else {
-                                        palette.surface
-                                    })
-                                    .cursor_pointer()
-                                    .hover(|style| style.border_color(palette.text))
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.select_runtime_version(version, cx)
-                                    }))
-                                    .child(format!("Java {version}"))
-                            }))
-                            .child(
-                                div()
-                                    .id("install-java-runtime")
-                                    .px_4()
-                                    .py_2()
-                                    .rounded_md()
-                                    .bg(palette.text)
-                                    .text_color(palette.background)
-                                    .cursor_pointer()
-                                    .hover(|style| style.opacity(0.85))
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        let version = this.runtime_version;
-                                        this.install_runtime(version, cx);
-                                    }))
-                                    .child("Install"),
-                            ),
-                    )
-                    .children(workspace.runtime_progress.as_ref().map(|progress| {
-                        let version = progress.version;
-                        let dismissing = workspace.runtime_notice_dismissing;
-                        div()
-                            .id(("java-install-progress", version as u32))
-                            .flex()
-                            .flex_col()
-                            .gap_2()
-                            .child(render_progress(progress))
-                            .children(workspace.runtime_status.as_ref().map(|status| {
-                                div()
-                                    .text_sm()
-                                    .text_color(palette.muted)
-                                    .child(status.clone())
-                            }))
-                            .with_animation(
-                                (
-                                    if dismissing {
-                                        "java-install-dismiss"
-                                    } else {
-                                        "java-install-notice"
-                                    },
-                                    version as u32,
-                                ),
-                                Animation::new(Duration::from_millis(250))
-                                    .with_easing(ease_out_quint()),
-                                move |notice, progress| {
-                                    if dismissing {
-                                        notice.opacity(1.0 - progress)
-                                    } else {
-                                        notice
-                                    }
-                                },
-                            )
-                    }))
-                    .when(workspace.runtime_progress.is_none(), |section| {
-                        section.children(workspace.runtime_status.as_ref().map(|status| {
+        let is_empty = installations.is_empty();
+        let list_content = if is_empty {
+            vec![empty_state::render_icon(
+                "icons/coffee.svg",
+                "No runtimes installed",
+                "Install a Java runtime to use it with your server instances.",
+                &palette,
+            )]
+        } else {
+            installations
+                .into_iter()
+                .map(|installation| {
+                    let version = installation.major_version;
+                    let folder = installation.directory().map(std::path::Path::to_path_buf);
+                    let open = cx.listener(move |this, _, _, cx| {
+                        if let Some(folder) = folder.clone() {
+                            this.open_runtime_folder(folder, cx);
+                        }
+                    });
+                    let delete =
+                        cx.listener(move |this, _, _, cx| this.delete_runtime(version, cx));
+                    div()
+                        .w_full()
+                        .child(RuntimeItem::new(installation).render(&palette, open, delete))
+                })
+                .collect()
+        };
+
+        super::panel_outer(&palette).child(
+            super::panel_surface(&palette)
+                .child(
+                    div()
+                        .id("runtimes-scroll")
+                        .flex_1()
+                        .min_h_0()
+                        .w_full()
+                        .overflow_y_scroll()
+                        .px_5()
+                        .pt_5()
+                        .pb_12()
+                        .flex()
+                        .flex_col()
+                        .gap_5()
+                        .child(super::section_header(
+                            "Java Runtimes",
+                            "Install and manage Java installations shared across server instances.",
+                            super::count_badge(count, &palette),
+                            &palette,
+                        ))
+                        .child(
                             div()
-                                .text_sm()
-                                .text_color(palette.muted)
-                                .child(status.clone())
-                        }))
-                    }),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .children(if installations.is_empty() {
-                        vec![empty_state::render_icon(
-                            "icons/coffee.svg",
-                            "No runtimes installed",
-                            "Install a Java runtime to use it with your server instances.",
-                            palette,
-                        )]
-                    } else {
-                        installations
-                            .into_iter()
-                            .map(|installation| {
-                                let version = installation.major_version;
-                                let folder =
-                                    installation.directory().map(std::path::Path::to_path_buf);
-                                let open = cx.listener(move |this, _, _, cx| {
-                                    if let Some(folder) = folder.clone() {
-                                        this.open_runtime_folder(folder, cx);
-                                    }
-                                });
-                                let delete = cx.listener(move |this, _, _, cx| {
-                                    this.delete_runtime(version, cx)
-                                });
-                                div().w_full().child(
-                                    RuntimeItem::new(installation).render(palette, open, delete),
+                                .w_full()
+                                .flex()
+                                .flex_col()
+                                .gap_4()
+                                .p_4()
+                                .rounded(px(16.0))
+                                .bg(palette.card_surface())
+                                .border_1()
+                                .border_color(palette.border)
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_col()
+                                        .gap_1()
+                                        .child(
+                                            div()
+                                                .text_sm()
+                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .text_color(palette.text)
+                                                .child("Install Java runtime"),
+                                        )
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .text_color(palette.muted)
+                                                .child("Choose a major version. Installed versions are shared between instances."),
+                                        ),
                                 )
-                            })
-                            .collect()
-                    }),
-            ),
-    )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .justify_between()
+                                        .flex_wrap()
+                                        .gap_3()
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .items_center()
+                                                .flex_wrap()
+                                                .gap_1()
+                                                .p_1()
+                                                .rounded(px(16.0))
+                                                .bg(palette.surface)
+                                                .border_1()
+                                                .border_color(palette.border)
+                                                .children([8_u8, 17, 21, 25].into_iter().map(
+                                                    |version| {
+                                                        let selected =
+                                                            self.runtime_version == version;
+                                                        div()
+                                                            .id(("java-version", version as u32))
+                                                            .px_3()
+                                                            .py_1p5()
+                                                            .rounded(px(12.0))
+                                                            .text_xs()
+                                                            .font_weight(FontWeight::MEDIUM)
+                                                            .cursor_pointer()
+                                                            .text_color(if selected {
+                                                                palette.text
+                                                            } else {
+                                                                palette.muted
+                                                            })
+                                                            .when(selected, |item| {
+                                                                item.bg(palette.surface_hover)
+                                                            })
+                                                            .when(!selected, |item| {
+                                                                item.hover(|style| {
+                                                                    style.text_color(palette.text)
+                                                                })
+                                                            })
+                                                            .on_click(cx.listener(
+                                                                move |this, _, _, cx| {
+                                                                    this.select_runtime_version(
+                                                                        version, cx,
+                                                                    )
+                                                                },
+                                                            ))
+                                                            .child(format!("Java {version}"))
+                                                    },
+                                                )),
+                                        )
+                                        .child(
+                                            Button::new("install-java-runtime")
+                                                .label("Install")
+                                                .primary()
+                                                .rounded(px(16.0))
+                                                .h(px(32.0))
+                                                .on_click(cx.listener(|this, _, _, cx| {
+                                                    let version = this.runtime_version;
+                                                    this.install_runtime(version, cx);
+                                                })),
+                                        ),
+                                )
+                                .children(self.runtime_progress.as_ref().map(|progress| {
+                                    let version = progress.version;
+                                    let dismissing = self.runtime_notice_dismissing;
+                                    div()
+                                        .id(("java-install-progress", version as u32))
+                                        .flex()
+                                        .flex_col()
+                                        .gap_2()
+                                        .child(render_progress(progress, &palette))
+                                        .children(self.runtime_status.as_ref().map(|status| {
+                                            div()
+                                                .text_xs()
+                                                .text_color(palette.muted)
+                                                .child(status.clone())
+                                        }))
+                                        .with_animation(
+                                            (
+                                                if dismissing {
+                                                    "java-install-dismiss"
+                                                } else {
+                                                    "java-install-notice"
+                                                },
+                                                version as u32,
+                                            ),
+                                            Animation::new(Duration::from_millis(250))
+                                                .with_easing(ease_out_quint()),
+                                            move |notice, progress| {
+                                                if dismissing {
+                                                    notice.opacity(1.0 - progress)
+                                                } else {
+                                                    notice
+                                                }
+                                            },
+                                        )
+                                }))
+                                .when(self.runtime_progress.is_none(), |section| {
+                                    section.children(self.runtime_status.as_ref().map(|status| {
+                                        div()
+                                            .text_xs()
+                                            .text_color(palette.muted)
+                                            .child(status.clone())
+                                    }))
+                                }),
+                        )
+                        .child(div().flex().flex_col().gap_3().children(list_content)),
+                )
+                .child(super::top_scroll_fade(palette.surface))
+                .child(super::bottom_scroll_fade(palette.surface)),
+        )
     }
 }
 
-fn render_progress(progress: &JavaProgress) -> Div {
-    let (label, percent) = match &progress.stage {
-        JavaStage::Resolving => ("Looking up Java release…", None),
-        JavaStage::Cached => ("Using cached runtime…", Some(100.0)),
+fn render_progress(progress: &JavaProgress, palette: &Palette) -> Div {
+    let (label, percent, failed) = match &progress.stage {
+        JavaStage::Resolving => ("Looking up Java release…", None, false),
+        JavaStage::Cached => ("Using cached runtime…", Some(100.0), false),
         JavaStage::Downloading => (
             "Downloading Java…",
             progress
                 .total
                 .filter(|total| *total > 0)
                 .map(|total| progress.downloaded as f32 / total as f32 * 100.0),
+            false,
         ),
-        JavaStage::Verifying => ("Verifying Java archive…", Some(100.0)),
-        JavaStage::Extracting => ("Extracting Java…", None),
-        JavaStage::Linking => ("Linking runtime to instance…", None),
-        JavaStage::Complete => ("Java installed.", Some(100.0)),
-        JavaStage::Failed(error) => (error.as_str(), None),
+        JavaStage::Verifying => ("Verifying Java archive…", Some(100.0), false),
+        JavaStage::Extracting => ("Extracting Java…", None, false),
+        JavaStage::Linking => ("Linking runtime to instance…", None, false),
+        JavaStage::Complete => ("Java installed.", Some(100.0), false),
+        JavaStage::Failed(error) => (error.as_str(), None, true),
     };
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .child(div().text_sm().child(label.to_owned()))
+        .child(
+            div()
+                .text_xs()
+                .text_color(if failed { palette.error } else { palette.text })
+                .child(label.to_owned()),
+        )
         .when_some(percent, |element, percent| {
             element.child(
-                div()
-                    .w_full()
-                    .h_1()
-                    .rounded_full()
-                    .bg(gpui::rgb(0x333333))
-                    .child(
-                        div()
-                            .h_full()
-                            .rounded_full()
-                            .bg(gpui::rgb(0x43b581))
-                            .w(gpui::relative(percent.clamp(0.0, 100.0) / 100.0)),
-                    ),
+                ProgressBar::new(("java-progress-bar", progress.version as u32), percent).color(
+                    if failed {
+                        palette.error
+                    } else {
+                        palette.accent
+                    },
+                ),
             )
         })
 }

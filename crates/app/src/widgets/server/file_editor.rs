@@ -1,6 +1,6 @@
 use gpui::{
     AppContext, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, Render, Window,
-    div, prelude::*, px, svg,
+    div, prelude::*, px,
 };
 use gpui_kit::component::input::{Textarea, TextareaState};
 use services::{
@@ -8,7 +8,7 @@ use services::{
     instance::{ServerInstance, files},
 };
 use std::path::PathBuf;
-use ui::components::button::button;
+use ui::{components::IconButton, theme::ActiveUiTheme};
 
 pub enum EditorEvent {
     Saved,
@@ -92,7 +92,7 @@ impl Focusable for FileEditor {
 
 impl Render for FileEditor {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         div()
             .flex()
             .flex_col()
@@ -105,7 +105,7 @@ impl Render for FileEditor {
                 div()
                     .flex()
                     .items_center()
-                    .gap_3()
+                    .gap_2()
                     .child(
                         div()
                             .flex_1()
@@ -116,37 +116,16 @@ impl Render for FileEditor {
                             .child(self.path.to_string_lossy().into_owned()),
                     )
                     .child(
-                        button("save-instance-file", "", palette, true, !self.busy)
-                            .w(px(36.))
-                            .h(px(36.))
-                            .p_0()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .flex_shrink_0()
-                            .child(
-                                svg()
-                                    .path("icons/save.svg")
-                                    .size_4()
-                                    .text_color(palette.background),
-                            )
+                        IconButton::new("save-instance-file", "icons/save.svg")
+                            .tooltip("Save file")
+                            .color(palette.accent)
+                            .disabled(self.busy)
                             .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
                     )
                     .child(
-                        button("close-instance-file", "", palette, false, !self.busy)
-                            .w(px(36.))
-                            .h(px(36.))
-                            .p_0()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .flex_shrink_0()
-                            .child(
-                                svg()
-                                    .path("icons/close.svg")
-                                    .size_4()
-                                    .text_color(palette.text),
-                            )
+                        IconButton::new("close-instance-file", "icons/x.svg")
+                            .tooltip("Close editor")
+                            .disabled(self.busy)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 if !this.busy {
                                     cx.emit(EditorEvent::Close);
@@ -157,7 +136,7 @@ impl Render for FileEditor {
             .children(self.error.as_ref().map(|error| {
                 div()
                     .text_xs()
-                    .text_color(gpui::rgb(0xe87878))
+                    .text_color(palette.error)
                     .child(error.clone())
             }))
             .child(
@@ -165,8 +144,11 @@ impl Render for FileEditor {
                     .id("file-editor-lines")
                     .flex_1()
                     .min_h_0()
-                    .bg(palette.sidebar)
-                    .rounded_md()
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .rounded(px(16.0))
+                    .overflow_hidden()
                     .child(
                         Textarea::new(&self.contents)
                             .h_full()

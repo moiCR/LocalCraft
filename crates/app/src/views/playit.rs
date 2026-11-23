@@ -1,8 +1,14 @@
 use std::sync::Arc;
 
-use gpui::{Context, IntoElement, Render, Window, div, prelude::*, px, svg};
-use gpui_kit::component::scroll::ScrollableElement;
+use gpui::{
+    App, ClickEvent, Context, FontWeight, IntoElement, Render, Window, div, prelude::*, px, svg,
+};
+use gpui_kit::{base::Disableable, component::scroll::ScrollableElement};
 use services::{AppState, playit::PlayitSnapshot};
+use ui::{
+    components::{Button, ButtonVariants},
+    theme::ActiveUiTheme,
+};
 
 const DASHBOARD_URL: &str = "https://playit.gg/account";
 const DOWNLOAD_URL: &str = "https://playit.gg/download";
@@ -139,7 +145,7 @@ impl Playit {
 
 impl Render for Playit {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         let state = &self.snapshot;
         let instance_targets = cx
             .global::<AppState>()
@@ -159,7 +165,7 @@ impl Render for Playit {
             "Not installed"
         };
         let service_color = if running {
-            gpui::rgb(0x70c98a)
+            palette.running
         } else {
             palette.muted
         };
@@ -178,332 +184,434 @@ impl Render for Playit {
                 .child(line.message.clone())
         });
 
-        super::page(
-            "Playit",
-            "Share your server without port forwarding.",
-            service_status,
-            palette,
-        )
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .flex_1()
-                .min_h_0()
-                .w_full()
-                .min_w_0()
-                .gap_5()
-                .overflow_y_scrollbar()
+        let status_pill = div()
+            .px_3()
+            .py_1()
+            .rounded(px(16.0))
+            .bg(palette.card_surface())
+            .border_1()
+            .border_color(palette.border)
+            .flex()
+            .items_center()
+            .gap_2()
+            .child(div().size(px(8.0)).rounded_full().bg(service_color))
+            .child(
+                div()
+                    .text_xs()
+                    .text_color(service_color)
+                    .child(service_status),
+            );
+
+        super::panel_outer(&palette).child(
+            super::panel_surface(&palette)
                 .child(
                     div()
-                        .flex()
-                        .flex_wrap()
-                        .items_center()
-                        .justify_between()
+                        .id("playit-scroll")
+                        .flex_1()
+                        .min_h_0()
                         .w_full()
-                        .min_w_0()
-                        .gap_4()
-                        .p_5()
-                        .rounded_lg()
-                        .border_1()
-                        .border_color(palette.border)
-                        .bg(palette.surface)
+                        .overflow_y_scroll()
+                        .px_5()
+                        .pt_5()
+                        .pb_12()
+                        .flex()
+                        .flex_col()
+                        .gap_5()
+                        .child(super::section_header(
+                            "Playit",
+                            "Share your server without port forwarding.",
+                            status_pill,
+                            &palette,
+                        ))
                         .child(
                             div()
-                                .flex()
-                                .items_center()
+                                .w_full()
                                 .min_w_0()
-                                .flex_1()
+                                .p_4()
+                                .rounded(px(16.0))
+                                .bg(palette.card_surface())
+                                .border_1()
+                                .border_color(palette.border)
+                                .flex()
+                                .flex_wrap()
+                                .items_center()
+                                .justify_between()
                                 .gap_4()
                                 .child(
                                     div()
-                                        .size_11()
                                         .flex()
                                         .items_center()
-                                        .justify_center()
-                                        .rounded_md()
-                                        .bg(palette.background)
+                                        .min_w_0()
+                                        .flex_1()
+                                        .gap_3()
                                         .child(
-                                            svg()
-                                                .path("icons/computer.svg")
-                                                .size_5()
-                                                .text_color(palette.text),
+                                            div()
+                                                .size(px(40.0))
+                                                .rounded(px(16.0))
+                                                .bg(palette.surface)
+                                                .border_1()
+                                                .border_color(palette.border)
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .flex_shrink_0()
+                                                .child(
+                                                    svg()
+                                                        .path("icons/computer.svg")
+                                                        .size_5()
+                                                        .text_color(palette.text),
+                                                ),
+                                        )
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .flex_col()
+                                                .min_w_0()
+                                                .gap_1()
+                                                .child(
+                                                    div()
+                                                        .text_sm()
+                                                        .font_weight(FontWeight::SEMIBOLD)
+                                                        .text_color(palette.text)
+                                                        .child("Playit agent"),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .text_color(palette.muted)
+                                                        .child(match &state.version {
+                                                            Some(version) => {
+                                                                format!("Official agent v{version}")
+                                                            }
+                                                            None if installed => {
+                                                                "Official agent installed"
+                                                                    .to_owned()
+                                                            }
+                                                            None => {
+                                                                "Install official agent to expose your servers."
+                                                                    .to_owned()
+                                                            }
+                                                        }),
+                                                ),
                                         ),
                                 )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_wrap()
+                                        .items_center()
+                                        .gap_2()
+                                        .min_w_0()
+                                        .justify_end()
+                                        .when(!installed, |actions| {
+                                            actions.child(
+                                                action_button(
+                                                    "install-playit-agent",
+                                                    "Install",
+                                                    self.busy,
+                                                    cx.listener(|this, _, _, cx| this.install(cx)),
+                                                )
+                                                .primary(),
+                                            )
+                                        })
+                                        .when(installed && !running && !connected, |actions| {
+                                            actions.child(
+                                                action_button(
+                                                    "connect-playit-account",
+                                                    "Connect account",
+                                                    self.busy,
+                                                    cx.listener(|this, _, _, cx| this.connect(cx)),
+                                                )
+                                                .primary(),
+                                            )
+                                        })
+                                        .when(installed && !running && connected, |actions| {
+                                            actions
+                                                .child(
+                                                    action_button(
+                                                        "start-playit-agent",
+                                                        "Start agent",
+                                                        self.busy,
+                                                        cx.listener(|this, _, _, cx| {
+                                                            this.start(cx)
+                                                        }),
+                                                    )
+                                                    .primary(),
+                                                )
+                                                .child(action_button(
+                                                    "update-playit-agent",
+                                                    "Update",
+                                                    self.busy,
+                                                    cx.listener(|this, _, _, cx| this.install(cx)),
+                                                ))
+                                        })
+                                        .when(installed && running, |actions| {
+                                            actions.child(
+                                                action_button(
+                                                    "stop-playit-agent",
+                                                    "Stop agent",
+                                                    self.busy,
+                                                    cx.listener(|this, _, _, cx| this.stop(cx)),
+                                                )
+                                                .danger(),
+                                            )
+                                        })
+                                        .child(action_button(
+                                            "refresh-playit-agent",
+                                            "Refresh",
+                                            self.busy,
+                                            cx.listener(|this, _, _, cx| this.refresh(cx)),
+                                        )),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .w_full()
+                                .min_w_0()
+                                .rounded(px(16.0))
+                                .bg(palette.card_surface())
+                                .border_1()
+                                .border_color(palette.border)
+                                .flex()
+                                .flex_col()
+                                .overflow_hidden()
+                                .child(
+                                    div()
+                                        .w_full()
+                                        .min_w_0()
+                                        .p_4()
+                                        .flex()
+                                        .flex_wrap()
+                                        .items_center()
+                                        .justify_between()
+                                        .gap_3()
+                                        .child(
+                                            div()
+                                                .text_sm()
+                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .text_color(palette.text)
+                                                .child("Tunnel setup"),
+                                        )
+                                        .child(
+                                            Button::new("open-playit-dashboard")
+                                                .label("Open Playit dashboard")
+                                                .primary()
+                                                .rounded(px(16.0))
+                                                .h(px(32.0))
+                                                .on_click(|_, _, cx| cx.open_url(DASHBOARD_URL)),
+                                        ),
+                                )
+                                .child(div().w_full().h(px(1.0)).bg(palette.border).opacity(0.6))
+                                .child(
+                                    div()
+                                        .w_full()
+                                        .min_w_0()
+                                        .p_4()
+                                        .flex()
+                                        .flex_col()
+                                        .gap_3()
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .flex_col()
+                                                .w_full()
+                                                .min_w_0()
+                                                .gap_1p5()
+                                                .text_xs()
+                                                .text_color(palette.muted)
+                                                .child(if connected {
+                                                    "1. Agent is linked. Create a Minecraft Java tunnel in the Playit dashboard for your server port."
+                                                } else {
+                                                    "1. Connect your Playit account. LocalCraft will generate a claim code and open its approval page."
+                                                })
+                                                .child("2. Approve the agent in your browser. LocalCraft saves the agent key locally and starts the agent.")
+                                                .child("3. Create a Minecraft Java tunnel in the dashboard, then copy its public address.")
+                                                .child("Tunnel creation and account settings stay in the official dashboard. LocalCraft stores the agent key locally so it can run the tunnel."),
+                                        )
+                                        .when_some(state.claim_code.clone(), |card, code| {
+                                            let claim_url = state.claim_url.clone().unwrap_or_default();
+                                            card.child(
+                                                div()
+                                                    .w_full()
+                                                    .min_w_0()
+                                                    .px_4()
+                                                    .py_3()
+                                                    .rounded(px(16.0))
+                                                    .bg(palette.surface)
+                                                    .border_1()
+                                                    .border_color(palette.border)
+                                                    .flex()
+                                                    .flex_wrap()
+                                                    .items_center()
+                                                    .justify_between()
+                                                    .gap_4()
+                                                    .child(
+                                                        div()
+                                                            .flex()
+                                                            .flex_col()
+                                                            .min_w_0()
+                                                            .gap_1()
+                                                            .child(
+                                                                div()
+                                                                    .text_xs()
+                                                                    .text_color(palette.muted)
+                                                                    .child("Playit claim code"),
+                                                            )
+                                                            .child(
+                                                                div()
+                                                                    .text_sm()
+                                                                    .font_family("Geist Mono")
+                                                                    .text_color(palette.text)
+                                                                    .child(code),
+                                                            ),
+                                                    )
+                                                    .child(
+                                                        Button::new("open-playit-claim")
+                                                            .label("Approve in browser")
+                                                            .primary()
+                                                            .rounded(px(16.0))
+                                                            .h(px(32.0))
+                                                            .on_click(move |_, _, cx| {
+                                                                cx.open_url(&claim_url)
+                                                            }),
+                                                    ),
+                                            )
+                                        })
+                                        .children(instance_targets.into_iter().map(
+                                            |(id, name, port)| {
+                                                div()
+                                                    .id(format!("playit-target-{id}"))
+                                                    .w_full()
+                                                    .min_w_0()
+                                                    .px_3()
+                                                    .py_2()
+                                                    .rounded(px(16.0))
+                                                    .bg(palette.surface)
+                                                    .border_1()
+                                                    .border_color(palette.border)
+                                                    .flex()
+                                                    .flex_wrap()
+                                                    .items_center()
+                                                    .justify_between()
+                                                    .gap_2()
+                                                    .child(
+                                                        div()
+                                                            .min_w_0()
+                                                            .text_xs()
+                                                            .text_color(palette.text)
+                                                            .child(name),
+                                                    )
+                                                    .child(
+                                                        div()
+                                                            .font_family("Geist Mono")
+                                                            .text_xs()
+                                                            .text_color(palette.muted)
+                                                            .flex_shrink_0()
+                                                            .child(format!("127.0.0.1:{port}")),
+                                                    )
+                                            },
+                                        ))
+                                        .children(if let Some(error) = error {
+                                            vec![
+                                                div()
+                                                    .text_xs()
+                                                    .text_color(palette.error)
+                                                    .child(error),
+                                            ]
+                                        } else {
+                                            Vec::new()
+                                        })
+                                        .children(status.map(|status| {
+                                            div()
+                                                .text_xs()
+                                                .text_color(service_color)
+                                                .child(status)
+                                        })),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .w_full()
+                                .min_w_0()
+                                .min_h_0()
+                                .h(px(260.0))
+                                .rounded(px(16.0))
+                                .bg(palette.card_surface())
+                                .border_1()
+                                .border_color(palette.border)
+                                .flex()
+                                .flex_col()
+                                .overflow_hidden()
+                                .child(
+                                    div()
+                                        .w_full()
+                                        .min_w_0()
+                                        .px_4()
+                                        .py_3()
+                                        .flex()
+                                        .flex_wrap()
+                                        .items_center()
+                                        .justify_between()
+                                        .gap_2()
+                                        .child(
+                                            div()
+                                                .text_sm()
+                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .text_color(palette.text)
+                                                .child("Agent output"),
+                                        )
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .text_color(service_color)
+                                                .child(service_status),
+                                        ),
+                                )
+                                .child(div().w_full().h(px(1.0)).bg(palette.border).opacity(0.6))
                                 .child(
                                     div()
                                         .flex()
                                         .flex_col()
+                                        .flex_1()
+                                        .w_full()
                                         .min_w_0()
-                                        .gap_1()
-                                        .child(div().font_weight(gpui::FontWeight::MEDIUM).child("Playit agent"))
-                                        .child(
-                                            div()
-                                                .text_sm()
-                                                .text_color(palette.muted)
-                                                .child(match &state.version {
-                                                    Some(version) => format!("Official agent v{version}"),
-                                                    None if installed => "Official agent installed".to_owned(),
-                                                    None => "Install official agent to expose your servers.".to_owned(),
-                                                }),
-                                        ),
-                                ),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .flex_wrap()
-                                .items_center()
-                                .gap_2()
-                                .min_w_0()
-                                .flex_1()
-                                .justify_end()
-                                .when(!installed, |actions| {
-                                    actions.child(action_button(
-                                        "install-playit-agent",
-                                        "Install",
-                                        palette,
-                                        self.busy,
-                                        cx.listener(|this, _, _, cx| this.install(cx)),
-                                    ))
-                                })
-                                .when(installed && !running && !connected, |actions| {
-                                    actions.child(action_button(
-                                        "connect-playit-account",
-                                        "Connect account",
-                                        palette,
-                                        self.busy,
-                                        cx.listener(|this, _, _, cx| this.connect(cx)),
-                                    ))
-                                })
-                                .when(installed && !running && connected, |actions| {
-                                    actions.child(action_button(
-                                        "start-playit-agent",
-                                        "Start agent",
-                                        palette,
-                                        self.busy,
-                                        cx.listener(|this, _, _, cx| this.start(cx)),
-                                    ))
-                                    .child(action_button(
-                                        "update-playit-agent",
-                                        "Update",
-                                        palette,
-                                        self.busy,
-                                        cx.listener(|this, _, _, cx| this.install(cx)),
-                                    ))
-                                })
-                                .when(installed && running, |actions| {
-                                    actions.child(action_button(
-                                        "stop-playit-agent",
-                                        "Stop agent",
-                                        palette,
-                                        self.busy,
-                                        cx.listener(|this, _, _, cx| this.stop(cx)),
-                                    ))
-                                })
-                                .child(action_button(
-                                    "refresh-playit-agent",
-                                    "Refresh",
-                                    palette,
-                                    self.busy,
-                                    cx.listener(|this, _, _, cx| this.refresh(cx)),
-                                )),
-                        ),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .w_full()
-                        .min_w_0()
-                        .gap_4()
-                        .p_5()
-                        .rounded_lg()
-                        .border_1()
-                        .border_color(palette.border)
-                        .bg(palette.surface)
-                        .child(
-                            div()
-                                .flex()
-                                .flex_wrap()
-                                .items_center()
-                                .justify_between()
-                                .gap_3()
-                                .w_full()
-                                .min_w_0()
-                                .child(div().font_weight(gpui::FontWeight::MEDIUM).child("Tunnel setup"))
-                                .child(
-                                    div()
-                                        .id("open-playit-dashboard")
-                                        .px_3()
+                                        .min_h_0()
+                                        .overflow_scrollbar()
+                                        .px_4()
                                         .py_2()
-                                        .rounded_md()
-                                        .bg(palette.text)
-                                        .text_color(palette.background)
-                                        .cursor_pointer()
-                                        .hover(|style| style.opacity(0.85))
-                                        .on_click(|_, _, cx| cx.open_url(DASHBOARD_URL))
-                                        .child("Open Playit dashboard"),
-                                ),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .flex_col()
-                                .w_full()
-                                .min_w_0()
-                                .gap_2()
-                                .text_sm()
-                                .text_color(palette.muted)
-                                .child(if connected {
-                                    "1. Agent is linked. Create a Minecraft Java tunnel in the Playit dashboard for your server port."
-                                } else {
-                                    "1. Connect your Playit account. LocalCraft will generate a claim code and open its approval page."
-                                })
-                                .child("2. Approve the agent in your browser. LocalCraft saves the agent key locally and starts the agent.")
-                                .child("3. Create a Minecraft Java tunnel in the dashboard, then copy its public address.")
-                                .child("Tunnel creation and account settings stay in the official dashboard. LocalCraft stores the agent key locally so it can run the tunnel."),
-                        )
-                        .when_some(state.claim_code.clone(), |card, code| {
-                            let claim_url = state.claim_url.clone().unwrap_or_default();
-                            card.child(
-                                div()
-                                    .flex()
-                                    .flex_wrap()
-                                    .items_center()
-                                    .justify_between()
-                                    .w_full()
-                                    .min_w_0()
-                                    .gap_4()
-                                    .px_3()
-                                    .py_3()
-                                    .rounded_md()
-                                    .bg(palette.background)
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .flex_col()
-                                            .min_w_0()
-                                            .gap_1()
-                                            .child(div().text_xs().text_color(palette.muted).child("Playit claim code"))
-                                            .child(div().font_family("Geist Mono").child(code)),
-                                    )
-                                    .child(
-                                        div()
-                                            .id("open-playit-claim")
-                                            .px_3()
-                                            .py_2()
-                                            .flex_shrink_0()
-                                            .rounded_md()
-                                            .bg(palette.text)
-                                            .text_color(palette.background)
-                                            .cursor_pointer()
-                                            .hover(|style| style.opacity(0.85))
-                                            .on_click(move |_, _, cx| cx.open_url(&claim_url))
-                                            .child("Approve in browser"),
-                                    ),
-                            )
-                        })
-                        .children(instance_targets.into_iter().map(|(id, name, port)| {
-                            div()
-                                .id(format!("playit-target-{id}"))
-                                .flex()
-                                .flex_wrap()
-                                .items_center()
-                                .justify_between()
-                                .gap_2()
-                                .w_full()
-                                .min_w_0()
-                                .px_3()
-                                .py_2()
-                                .rounded_md()
-                                .bg(palette.background)
-                                .child(div().min_w_0().child(name))
-                                .child(
-                                    div()
-                                        .font_family("Geist Mono")
-                                        .text_color(palette.text)
-                                        .flex_shrink_0()
-                                        .child(format!("127.0.0.1:{port}")),
-                                )
-                        }))
-                        .children(if let Some(error) = error {
-                            vec![div().text_sm().text_color(gpui::rgb(0xe06c75)).child(error)]
-                        } else {
-                            Vec::new()
-                        })
-                        .children(status.map(|status| {
-                            div().text_sm().text_color(service_color).child(status)
-                        })),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .w_full()
-                        .min_w_0()
-                        .min_h_0()
-                        .h(px(260.))
-                        .rounded_lg()
-                        .border_1()
-                        .border_color(palette.border)
-                        .bg(palette.surface)
-                        .child(
-                            div()
-                                .flex()
-                                .flex_wrap()
-                                .items_center()
-                                .justify_between()
-                                .gap_2()
-                                .min_w_0()
-                                .px_4()
-                                .py_3()
-                                .border_b_1()
-                                .border_color(palette.border)
-                                .child(div().font_weight(gpui::FontWeight::MEDIUM).child("Agent output"))
-                                .child(div().text_xs().text_color(service_color).child(service_status)),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .flex_col()
-                                .flex_1()
-                                .w_full()
-                                .min_w_0()
-                                .min_h_0()
-                                .overflow_scrollbar()
-                                .px_4()
-                                .py_2()
-                                .children(if state.logs.is_empty() {
-                                    vec![div()
-                                        .id("playit-empty-log")
-                                        .py_2()
-                                        .text_color(palette.muted)
-                                        .child(if running {
-                                            "Waiting for Playit output…"
+                                        .children(if state.logs.is_empty() {
+                                            vec![
+                                                div()
+                                                    .id("playit-empty-log")
+                                                    .py_2()
+                                                    .text_xs()
+                                                    .text_color(palette.muted)
+                                                    .child(if running {
+                                                        "Waiting for Playit output…"
+                                                    } else {
+                                                        "Agent output will appear here."
+                                                    }),
+                                            ]
                                         } else {
-                                            "Agent output will appear here."
-                                        })]
-                                } else {
-                                    log_lines.collect()
-                                }),
+                                            log_lines.collect()
+                                        }),
+                                ),
+                        )
+                        .child(
+                            div().flex().justify_end().child(
+                                div()
+                                    .id("open-playit-downloads")
+                                    .text_xs()
+                                    .text_color(palette.muted)
+                                    .cursor_pointer()
+                                    .hover(|style| style.text_color(palette.text))
+                                    .on_click(|_, _, cx| cx.open_url(DOWNLOAD_URL))
+                                    .child("Playit downloads and documentation"),
+                            ),
                         ),
                 )
-                .child(
-                    div()
-                        .flex()
-                        .justify_end()
-                        .child(
-                            div()
-                                .id("open-playit-downloads")
-                                .text_xs()
-                                .text_color(palette.muted)
-                                .cursor_pointer()
-                                .hover(|style| style.text_color(palette.text))
-                                .on_click(|_, _, cx| cx.open_url(DOWNLOAD_URL))
-                                .child("Playit downloads and documentation"),
-                        ),
-                ),
+                .child(super::top_scroll_fade(palette.surface))
+                .child(super::bottom_scroll_fade(palette.surface)),
         )
     }
 }
@@ -511,28 +619,13 @@ impl Render for Playit {
 fn action_button(
     id: &'static str,
     label: &'static str,
-    palette: &ui::theme::Palette,
     disabled: bool,
-    click: impl Fn(&gpui::ClickEvent, &mut Window, &mut gpui::App) + 'static,
-) -> gpui::Stateful<gpui::Div> {
-    div()
-        .id(id)
-        .px_3()
-        .py_2()
-        .rounded_md()
-        .border_1()
-        .border_color(palette.border)
-        .text_color(if disabled {
-            palette.muted
-        } else {
-            palette.text
-        })
-        .when(!disabled, |button| {
-            button
-                .cursor_pointer()
-                .hover(|style| style.bg(palette.background))
-        })
-        .when(disabled, |button| button.opacity(0.55))
+    click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Button {
+    Button::new(id)
+        .label(label)
+        .rounded(px(16.0))
+        .h(px(32.0))
+        .disabled(disabled)
         .on_click(click)
-        .child(label)
 }

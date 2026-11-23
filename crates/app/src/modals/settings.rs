@@ -1,184 +1,193 @@
-use std::time::Duration;
-
-use gpui::{
-    Animation, AnimationExt, Context, IntoElement, MouseButton, div, ease_out_quint, prelude::*,
-    px, rgba, svg,
+use gpui::{prelude::FluentBuilder as _, *};
+use gpui_kit::base::{Scrollbar, ScrollbarMode};
+use ui::{
+    components::{IconButton, Modal},
+    theme::ActiveUiTheme,
 };
-use services::AppState;
 
-use super::appearance;
-use crate::pages::layout::RootLayout;
+use super::{appearance, settings_preferences::SettingsPreferences};
+use crate::widgets::updater::AppUpdater;
 
-pub fn render(layout: &RootLayout, cx: &Context<RootLayout>) -> impl IntoElement {
-    let palette = cx.global::<AppState>().theme_manager.palette();
-    div()
-        .id("settings-overlay")
-        .absolute()
-        .inset_0()
-        .size_full()
-        .flex()
-        .items_center()
-        .justify_center()
-        .p_6()
-        .bg(rgba(0x00000099))
-        .occlude()
-        .on_mouse_down(
-            MouseButton::Left,
-            cx.listener(|this, _, window, cx| {
-                this.close_settings(window, cx);
-                cx.stop_propagation();
-            }),
-        )
-        .child(
-            div()
-                .id("settings-dialog")
-                .track_focus(&layout.settings_focus)
-                .w(px(480.))
-                .max_w_full()
-                .max_h_full()
-                .min_h_0()
-                .flex()
-                .flex_col()
-                .bg(palette.background)
-                .border_1()
-                .border_color(palette.border)
-                .rounded_lg()
-                .shadow_lg()
-                .occlude()
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
-                    match event.keystroke.key.as_str() {
-                        "escape" => this.close_settings(window, cx),
-                        "left" | "right" => {
-                            cx.update_global::<AppState, _>(|state, cx| {
-                                use ui::theme::Appearance;
-                                let appearance = match state.theme_manager.appearance() {
-                                    Appearance::Dark => Appearance::Light,
-                                    Appearance::Light => Appearance::Dark,
-                                };
-                                appearance::set_app_appearance(state, cx, appearance);
-                            });
-                        }
-                        _ => {}
-                    }
-                    cx.stop_propagation();
-                }))
-                .child(
-                    div()
-                        .flex()
-                        .items_start()
-                        .justify_between()
-                        .p_6()
-                        .gap_4()
-                        .child(
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsTab {
+    #[default]
+    General,
+    Appearance,
+    Updates,
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct SettingsModalState {
+    pub open: bool,
+    pub tab: SettingsTab,
+}
+
+impl Global for SettingsModalState {}
+
+#[derive(IntoElement)]
+pub struct SettingsModal;
+
+impl SettingsModal {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn close(window: &mut Window, cx: &mut App) {
+        let tab = cx
+            .try_global::<SettingsModalState>()
+            .map_or(SettingsTab::default(), |state| state.tab);
+        cx.set_global(SettingsModalState { open: false, tab });
+        window.blur(cx);
+        window.refresh();
+    }
+
+    fn render_header(tab: SettingsTab, palette: ui::theme::Palette) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_none()
+            .items_center()
+            .justify_between()
+            .gap_3()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .p_1()
+                    .rounded(px(16.0))
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .children(
+                        [
+                            (SettingsTab::General, "General"),
+                            (SettingsTab::Appearance, "Appearance"),
+                            (SettingsTab::Updates, "Updates"),
+                        ]
+                        .map(|(section, label)| {
+                            let selected = section == tab;
                             div()
-                                .flex()
-                                .flex_col()
-                                .gap_1()
-                                .child(div().text_lg().child("Settings"))
-                                .child(
-                                    div()
-                                        .text_sm()
-                                        .text_color(palette.muted)
-                                        .child("Make LocalCraft feel like home."),
-                                ),
-                        )
-                        .child(
-                            div()
-                                .id("close-settings")
-                                .w(px(36.))
-                                .h(px(36.))
+                                .id(("settings-tab", section as usize))
                                 .flex()
                                 .items_center()
                                 .justify_center()
-                                .cursor_pointer()
-                                .rounded_md()
-                                .border_1()
-                                .border_color(palette.border)
-                                .text_color(palette.text)
-                                .hover(|style| style.bg(palette.surface).text_color(palette.text))
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.close_settings(window, cx)
-                                }))
-                                .child(
-                                    svg()
-                                        .path("icons/close.svg")
-                                        .size_4()
-                                        .text_color(palette.text),
-                                ),
-                        ),
-                )
-                .child(
-                    div()
-                        .id("settings-content")
-                        .flex()
-                        .flex_col()
-                        .min_h_0()
-                        .max_h(px(500.))
-                        .overflow_y_scroll()
-                        .child(
-                            div()
-                                .border_t_1()
-                                .border_color(palette.border)
-                                .p_6()
-                                .child(appearance::render(cx)),
-                        )
-                        .child(
-                            div()
-                                .border_t_1()
-                                .border_color(palette.border)
-                                .p_6()
-                                .child(layout.settings_preferences.clone()),
-                        )
-                        .child(
-                            div()
-                                .border_t_1()
-                                .border_color(palette.border)
-                                .p_6()
-                                .child(layout.updater.clone()),
-                        ),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .gap_4()
-                        .border_t_1()
-                        .border_color(palette.border)
-                        .px_6()
-                        .py_4()
-                        .child(
-                            div()
+                                .h(px(28.0))
+                                .px_3()
+                                .rounded(px(12.0))
                                 .text_xs()
-                                .text_color(palette.muted)
-                                .child("Changes are saved automatically."),
-                        )
-                        .child(
-                            div()
-                                .id("settings-done")
-                                .px_4()
-                                .py_2()
-                                .rounded_md()
-                                .bg(palette.text)
-                                .text_color(palette.background)
+                                .font_weight(if selected {
+                                    FontWeight::MEDIUM
+                                } else {
+                                    FontWeight::NORMAL
+                                })
+                                .text_color(if selected {
+                                    palette.text
+                                } else {
+                                    palette.muted
+                                })
+                                .when(selected, |el| el.bg(palette.surface_hover))
                                 .cursor_pointer()
-                                .hover(|style| style.opacity(0.85))
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.close_settings(window, cx)
-                                }))
-                                .child("Done"),
-                        ),
-                )
-                .with_animation(
-                    "settings-dialog-enter",
-                    Animation::new(Duration::from_millis(300)).with_easing(ease_out_quint()),
-                    |dialog, progress| dialog.relative().top(px(10. * (1. - progress))),
+                                .when(!selected, |el| {
+                                    el.hover(move |s| s.text_color(palette.text))
+                                })
+                                .on_click(move |_, window, cx| {
+                                    if !selected {
+                                        cx.set_global(SettingsModalState {
+                                            open: true,
+                                            tab: section,
+                                        });
+                                        window.refresh();
+                                    }
+                                })
+                                .child(label)
+                        }),
+                    ),
+            )
+            .child(
+                div().flex_none().child(
+                    IconButton::new("btn-close-settings", "icons/x.svg")
+                        .size(px(32.0))
+                        .color(palette.muted)
+                        .hover_bg(palette.surface_hover)
+                        .tooltip("Close")
+                        .on_click(|_, window, cx| Self::close(window, cx)),
                 ),
-        )
-        .with_animation(
-            "settings-overlay-enter",
-            Animation::new(Duration::from_millis(300)).with_easing(ease_out_quint()),
-            |overlay, progress| overlay.opacity(progress),
-        )
+            )
+    }
+}
+
+impl Default for SettingsModal {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RenderOnce for SettingsModal {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let modal_state = cx
+            .try_global::<SettingsModalState>()
+            .copied()
+            .unwrap_or_default();
+        let is_open = modal_state.open;
+        let tab_index = modal_state.tab as usize;
+        let palette = cx.ui_palette();
+        let viewport = window.viewport_size();
+
+        let preferences = window.use_keyed_state("settings-preferences-entity", cx, |_, cx| {
+            SettingsPreferences::new(cx)
+        });
+        let scroll_handle = window
+            .use_keyed_state(("settings-scroll-handle", tab_index), cx, |_, _| {
+                ScrollHandle::new()
+            })
+            .read(cx)
+            .clone();
+
+        let content: AnyElement = match modal_state.tab {
+            SettingsTab::General => preferences.into_any_element(),
+            SettingsTab::Appearance => appearance::render(cx).into_any_element(),
+            SettingsTab::Updates => cx
+                .try_global::<AppUpdater>()
+                .map(|updater| updater.0.clone().into_any_element())
+                .unwrap_or_else(|| div().into_any_element()),
+        };
+
+        div()
+            .id("settings-modal-root")
+            .absolute()
+            .inset_0()
+            .size_full()
+            .capture_key_down(move |event: &KeyDownEvent, window, cx| {
+                if is_open && event.keystroke.key == "escape" {
+                    Self::close(window, cx);
+                    cx.stop_propagation();
+                }
+            })
+            .child(
+                Modal::new("settings-modal")
+                    .open(is_open)
+                    .compact()
+                    .width((viewport.width - px(32.0)).clamp(px(0.0), px(580.0)))
+                    .max_height((viewport.height - px(32.0)).clamp(px(0.0), px(460.0)))
+                    .header(Self::render_header(modal_state.tab, palette))
+                    .on_close(Self::close)
+                    .child(
+                        div()
+                            .relative()
+                            .flex_1()
+                            .min_h_0()
+                            .pt_1()
+                            .child(
+                                div()
+                                    .id(("settings-content", tab_index))
+                                    .size_full()
+                                    .overflow_y_scroll()
+                                    .track_scroll(&scroll_handle)
+                                    .pr_2()
+                                    .child(content),
+                            )
+                            .child(Scrollbar::vertical(&scroll_handle).mode(ScrollbarMode::Always)),
+                    ),
+            )
+    }
 }

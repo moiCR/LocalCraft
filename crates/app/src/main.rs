@@ -3,11 +3,11 @@
     windows_subsystem = "windows"
 )]
 
+mod layout;
 mod modals;
 #[rustfmt::skip]
 #[path = "pages_modules.rs"]
 pub mod pages;
-mod shell;
 mod views;
 mod widgets;
 
@@ -37,13 +37,12 @@ fn main() {
         .with_assets(assets::Assets)
         .use_pages()
         .run_with(move |cx: &mut App| {
+            let appearance = state.theme_manager.appearance();
+            let collapsed = state.preferences.sidebar_collapsed;
             cx.set_global(state);
+            cx.set_global(layout::SidebarState { collapsed });
             gpui_kit::init(cx);
-            let theme_mode = match cx.global::<services::AppState>().theme_manager.appearance() {
-                ui::theme::Appearance::Dark => gpui_kit::component::theme::ThemeMode::Dark,
-                ui::theme::Appearance::Light => gpui_kit::component::theme::ThemeMode::Light,
-            };
-            gpui_kit::component::theme::Theme::change(theme_mode, None, cx);
+            ui::theme::sync_component_theme(appearance, cx);
             ui::components::input::init(cx);
             cx.on_app_quit(move |cx| {
                 let mut servers = shutdown_capture
@@ -61,6 +60,7 @@ fn main() {
                 eprintln!("Failed to load application fonts: {error}");
             }
             views::AppViews::init(cx);
+            widgets::updater::AppUpdater::init(cx);
             let manager = match PageManager::new(PAGE_ROUTES, "/", cx) {
                 Ok(manager) => cx.new(|_| manager),
                 Err(error) => {

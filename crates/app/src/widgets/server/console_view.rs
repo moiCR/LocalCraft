@@ -6,7 +6,10 @@ use gpui::{
 };
 use services::{AppState, instance::console::ConsoleSnapshot};
 use std::{sync::Arc, time::Duration};
-use ui::components::input::{Input, InputEvent};
+use ui::{
+    components::input::{Input, InputEvent},
+    theme::ActiveUiTheme,
+};
 
 #[cfg(test)]
 #[path = "console_view_tests.rs"]
@@ -124,7 +127,7 @@ impl Render for ConsoleView {
         }
         #[cfg(test)]
         let rendered_rows = self.rendered_rows.clone();
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         let timestamp_color = palette.muted;
         let show_timestamps = cx.global::<AppState>().preferences.console_timestamps;
         let entity = cx.entity();
@@ -152,9 +155,16 @@ impl Render for ConsoleView {
                             .child(
                                 div()
                                     .id("copy-console")
+                                    .px_2p5()
+                                    .py_1()
+                                    .rounded(px(16.0))
+                                    .bg(palette.card_surface())
+                                    .border_1()
+                                    .border_color(palette.border)
                                     .text_xs()
                                     .cursor_pointer()
                                     .text_color(palette.muted)
+                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
                                     .child("Copy all")
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         let text = this
@@ -172,18 +182,40 @@ impl Render for ConsoleView {
                             .child(
                                 div()
                                     .id("clear-console")
+                                    .px_2p5()
+                                    .py_1()
+                                    .rounded(px(16.0))
+                                    .bg(palette.card_surface())
+                                    .border_1()
+                                    .border_color(palette.border)
                                     .text_xs()
                                     .cursor_pointer()
                                     .text_color(palette.muted)
+                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
                                     .child("Clear")
                                     .on_click(cx.listener(|this, _, _, cx| this.clear(cx))),
                             )
                             .child(
                                 div()
                                     .id("follow-console")
+                                    .px_2p5()
+                                    .py_1()
+                                    .rounded(px(16.0))
+                                    .bg(palette.card_surface())
+                                    .border_1()
+                                    .border_color(if self.console.follow {
+                                        palette.accent
+                                    } else {
+                                        palette.border
+                                    })
                                     .text_xs()
                                     .cursor_pointer()
-                                    .text_color(palette.muted)
+                                    .text_color(if self.console.follow {
+                                        palette.text
+                                    } else {
+                                        palette.muted
+                                    })
+                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
                                     .child(if self.console.follow {
                                         "Auto-scroll on"
                                     } else {
@@ -209,8 +241,10 @@ impl Render for ConsoleView {
                     .min_h_0()
                     .w_full()
                     .overflow_hidden()
-                    .bg(palette.sidebar)
-                    .rounded_md()
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .rounded(px(16.0))
                     .when(self.loading, |element| {
                         element.flex().items_center().justify_center().child(
                             svg()

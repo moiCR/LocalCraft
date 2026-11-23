@@ -1,6 +1,7 @@
+use crate::theme::ActiveUiTheme;
 use gpui::{
     App, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString,
-    Window, div, prelude::*, px, rgba,
+    Window, div, prelude::*, px,
 };
 use std::{cell::Cell, rc::Rc};
 
@@ -57,16 +58,17 @@ impl Focusable for Select {
     }
 }
 impl Render for Select {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let menu_bounds = self.menu_bounds.clone();
         let menu_scroll = self.menu_scroll.clone();
-        let text_color = window.text_style().color;
-        let dark = text_color.l > 0.5;
-        let background = if dark {
-            gpui::rgb(0x141414)
-        } else {
-            gpui::rgb(0xffffff)
-        };
+        let palette = cx.ui_palette();
+        let background = palette.surface;
+        let field_background = palette.card_surface();
+        let hover_bg = palette.surface_hover;
+        let border = palette.border;
+        let text_color = palette.text;
+        let muted = palette.muted;
+        let has_value = self.value().is_some();
         div()
             .id("select")
             .relative()
@@ -119,11 +121,15 @@ impl Render for Select {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .h(px(38.))
+                    .gap_2()
+                    .h(px(32.))
                     .px_3()
+                    .bg(field_background)
                     .border_1()
-                    .border_color(rgba(0x88888855))
-                    .rounded_md()
+                    .border_color(border)
+                    .rounded(px(16.))
+                    .text_size(px(13.))
+                    .text_color(if has_value { text_color } else { muted })
                     .opacity(if self.enabled { 1. } else { 0.45 })
                     .when(self.enabled, |element| element.cursor_pointer())
                     .on_click(cx.listener(|this, _, window, cx| {
@@ -134,12 +140,14 @@ impl Render for Select {
                         }
                     }))
                     .child(
-                        self.value()
-                            .map(str::to_owned)
-                            .map(SharedString::from)
-                            .unwrap_or_else(|| self.placeholder.clone()),
+                        div().min_w_0().truncate().child(
+                            self.value()
+                                .map(str::to_owned)
+                                .map(SharedString::from)
+                                .unwrap_or_else(|| self.placeholder.clone()),
+                        ),
                     )
-                    .child("⌄"),
+                    .child(div().flex_none().text_color(muted).child("⌄")),
             )
             .when(self.open && self.enabled, |element| {
                 element.child(
@@ -151,12 +159,13 @@ impl Render for Select {
                             .left_0()
                             .w_full()
                             .mt_1()
+                            .p_1()
                             .max_h(px(240.))
                             .bg(background)
                             .text_color(text_color)
                             .border_1()
-                            .border_color(rgba(0x88888855))
-                            .rounded_md()
+                            .border_color(border)
+                            .rounded(px(16.))
                             .shadow_lg()
                             .occlude()
                             .child(
@@ -171,18 +180,22 @@ impl Render for Select {
                             .child(
                                 div()
                                     .id("select-menu-options")
-                                    .max_h(px(240.))
+                                    .max_h(px(230.))
                                     .overflow_y_scroll()
                                     .scrollbar_width(px(8.))
                                     .track_scroll(&menu_scroll)
                                     .children(self.options.iter().enumerate().map(
                                         |(index, option)| {
+                                            let is_selected = self.selected == Some(index);
                                             div()
                                                 .id(option.clone())
                                                 .px_3()
-                                                .py_2()
+                                                .py_1p5()
+                                                .rounded(px(12.))
+                                                .text_size(px(13.))
+                                                .when(is_selected, |row| row.bg(hover_bg))
                                                 .cursor_pointer()
-                                                .hover(|style| style.bg(rgba(0x88888830)))
+                                                .hover(move |style| style.bg(hover_bg))
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     this.choose(index, cx)
                                                 }))
@@ -203,7 +216,7 @@ pub fn field(label: &'static str, select: &Entity<Select>) -> impl IntoElement {
         .flex_col()
         .flex_1()
         .min_w_0()
-        .gap_2()
-        .child(label)
+        .gap_1p5()
+        .child(div().text_xs().child(label))
         .child(select.clone())
 }

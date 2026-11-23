@@ -1,10 +1,9 @@
-use gpui::{
-    Animation, AnimationExt, App, ClickEvent, IntoElement, Window, div, ease_out_quint, prelude::*,
-    px, svg,
-};
+use gpui::{App, ClickEvent, Div, FontWeight, SharedString, Window, div, prelude::*, px, svg};
 use services::java::JavaInstallation;
-use std::time::Duration;
-use ui::theme::Palette;
+use ui::{
+    components::{IconButton, card_surface},
+    theme::Palette,
+};
 
 pub struct RuntimeItem {
     installation: JavaInstallation,
@@ -20,95 +19,106 @@ impl RuntimeItem {
         palette: &Palette,
         on_open: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
         on_delete: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    ) -> impl IntoElement {
+    ) -> Div {
         let version = self.installation.major_version;
-        let binary = self.installation.binary_path().display().to_string();
-        div()
-            .id(("runtime-item", version as u32))
+        let path_label: SharedString = self
+            .installation
+            .directory()
+            .unwrap_or(self.installation.binary_path().as_path())
+            .display()
+            .to_string()
+            .into();
+        let can_open = self.installation.directory().is_some();
+
+        card_surface(palette.surface, palette.surface_hover, palette.border)
+            .w_full()
+            .px_4()
+            .py_3()
             .flex()
             .items_center()
             .justify_between()
-            .gap_4()
-            .w_full()
-            .p_4()
-            .rounded_lg()
-            .border_1()
-            .border_color(palette.border)
-            .bg(palette.surface)
+            .gap_3()
             .child(
                 div()
                     .flex()
-                    .flex_1()
-                    .flex_basis(px(360.))
+                    .items_center()
+                    .gap_3()
                     .min_w_0()
-                    .flex_col()
-                    .gap_1()
+                    .flex_1()
                     .child(
                         div()
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .child(format!("Java {version}")),
+                            .size(px(36.0))
+                            .rounded(px(16.0))
+                            .bg(palette.card_surface())
+                            .border_1()
+                            .border_color(palette.border)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .flex_shrink_0()
+                            .child(
+                                svg()
+                                    .path("icons/coffee.svg")
+                                    .size(px(16.0))
+                                    .text_color(palette.text),
+                            ),
                     )
                     .child(
                         div()
-                            .w_full()
+                            .flex()
+                            .flex_col()
+                            .gap_0p5()
                             .min_w_0()
-                            .truncate()
-                            .text_xs()
-                            .text_color(palette.muted)
-                            .child(binary),
+                            .flex_1()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .text_color(palette.text)
+                                            .child(format!("Java {version}")),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .text_color(palette.muted)
+                                            .child(self.installation.vendor),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .text_color(palette.muted)
+                                    .truncate()
+                                    .child(path_label),
+                            ),
                     ),
             )
             .child(
                 div()
                     .flex()
-                    .flex_shrink_0()
                     .items_center()
-                    .gap_2()
-                    .child(action_button(
-                        ("runtime-folder", version as u32),
-                        "folder-open",
-                        palette,
-                        on_open,
-                    ))
-                    .child(action_button(
-                        ("runtime-delete", version as u32),
-                        "trash",
-                        palette,
-                        on_delete,
-                    )),
-            )
-            .with_animation(
-                ("runtime-item-enter", version as u32),
-                Animation::new(Duration::from_millis(260)).with_easing(ease_out_quint()),
-                |item, progress| {
-                    item.relative()
-                        .top(px(8.0 * (1.0 - progress)))
-                        .opacity(progress)
-                },
+                    .gap_1()
+                    .flex_shrink_0()
+                    .child(
+                        IconButton::new(
+                            ("open-runtime", u32::from(version)),
+                            "icons/folder-open.svg",
+                        )
+                        .tooltip("Open folder")
+                        .disabled(!can_open)
+                        .on_click(on_open),
+                    )
+                    .child(
+                        IconButton::new(("delete-runtime", u32::from(version)), "icons/trash.svg")
+                            .tooltip("Delete runtime")
+                            .color(palette.error)
+                            .on_click(on_delete),
+                    ),
             )
     }
-}
-
-fn action_button(
-    id: (&'static str, u32),
-    icon: &'static str,
-    palette: &Palette,
-    action: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-) -> impl IntoElement {
-    div()
-        .id(id)
-        .flex()
-        .items_center()
-        .justify_center()
-        .size_8()
-        .rounded_md()
-        .cursor_pointer()
-        .hover(|style| style.bg(palette.background))
-        .on_click(action)
-        .child(
-            svg()
-                .path(format!("icons/{icon}.svg"))
-                .size_4()
-                .text_color(palette.muted),
-        )
 }

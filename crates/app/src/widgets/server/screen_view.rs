@@ -1,21 +1,39 @@
 use super::console_view::ConsoleView;
 use super::screen::{Back, Operation, ServerScreen, ServerSection};
-use gpui::{Context, IntoElement, Render, Window, div, prelude::*, svg};
-use services::AppState;
-use ui::components::button::button;
+use gpui::{Context, FontWeight, IntoElement, Render, Window, div, prelude::*, px, svg};
+use gpui_kit::base::Disableable;
+use ui::{
+    components::{Button, ButtonVariants, IconButton},
+    theme::{ActiveUiTheme, Palette},
+};
 
 impl Render for ServerScreen {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         let console = self.console.clone();
         let logs = self.logs.clone();
         let files = self.files.clone();
+        let status_color = if self.busy {
+            palette.warning
+        } else if self.running {
+            palette.running
+        } else {
+            palette.muted
+        };
+        let status_label = if self.busy {
+            "Working…"
+        } else if self.running {
+            "Running"
+        } else {
+            "Stopped"
+        };
+
         div()
             .relative()
             .size_full()
             .flex()
             .flex_col()
-            .p_6()
+            .p_5()
             .gap_4()
             .min_h_0()
             .min_w_0()
@@ -25,22 +43,8 @@ impl Render for ServerScreen {
                     .items_center()
                     .gap_3()
                     .child(
-                        div()
-                            .id("back-to-servers")
-                            .size_9()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded_md()
-                            .text_color(palette.muted)
-                            .cursor_pointer()
-                            .hover(|style| style.bg(palette.surface).text_color(palette.text))
-                            .child(
-                                svg()
-                                    .path("icons/chevron-left.svg")
-                                    .size_4()
-                                    .text_color(palette.muted),
-                            )
+                        IconButton::new("back-to-servers", "icons/chevron-left.svg")
+                            .tooltip("Back to servers")
                             .on_click(cx.listener(|_, _, _, cx| cx.emit(Back))),
                     )
                     .child(
@@ -48,13 +52,18 @@ impl Render for ServerScreen {
                             .flex()
                             .items_center()
                             .gap_1()
+                            .p_1()
+                            .rounded(px(16.0))
+                            .bg(palette.card_surface())
+                            .border_1()
+                            .border_color(palette.border)
                             .child(
                                 section_tab(
                                     "server-tab-console",
                                     "Console",
                                     "icons/square-terminal.svg",
                                     self.section == ServerSection::Console,
-                                    palette,
+                                    &palette,
                                 )
                                 .on_click(cx.listener(
                                     |this, _, _, cx| {
@@ -68,7 +77,7 @@ impl Render for ServerScreen {
                                     "Logs",
                                     "icons/logs.svg",
                                     self.section == ServerSection::Logs,
-                                    palette,
+                                    &palette,
                                 )
                                 .on_click(cx.listener(
                                     |this, _, _, cx| this.change_section(ServerSection::Logs, cx),
@@ -80,7 +89,7 @@ impl Render for ServerScreen {
                                     "Files",
                                     "icons/files.svg",
                                     self.section == ServerSection::Files,
-                                    palette,
+                                    &palette,
                                 )
                                 .on_click(cx.listener(
                                     |this, _, _, cx| this.change_section(ServerSection::Files, cx),
@@ -100,16 +109,26 @@ impl Render for ServerScreen {
                             .flex_col()
                             .gap_1()
                             .min_w_0()
-                            .child(div().text_2xl().child(self.server.name.clone()))
-                            .child(div().text_color(palette.muted).child(format!(
+                            .child(
+                                div()
+                                    .text_lg()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .text_color(palette.text)
+                                    .truncate()
+                                    .child(self.server.name.clone()),
+                            )
+                            .child(div().text_xs().text_color(palette.muted).child(format!(
                                 "{} · {} · localhost:{}",
                                 self.server.version, self.server.software, self.server.port
                             ))),
                     )
                     .child(
-                        button("server-settings", "Settings", palette, false, !self.busy).on_click(
-                            cx.listener(|this, _, window, cx| this.open_settings(window, cx)),
-                        ),
+                        IconButton::new("server-settings", "icons/settings.svg")
+                            .tooltip("Server settings")
+                            .disabled(self.busy)
+                            .on_click(
+                                cx.listener(|this, _, window, cx| this.open_settings(window, cx)),
+                            ),
                     ),
             )
             .child(
@@ -121,49 +140,51 @@ impl Render for ServerScreen {
                     .border_y_1()
                     .border_color(palette.border)
                     .child(
-                        button(
-                            "start-server",
-                            "Start",
-                            palette,
-                            true,
-                            !self.running && !self.busy,
-                        )
-                        .on_click(cx.listener(|this, _, _, cx| this.operate(Operation::Start, cx))),
+                        Button::new("start-server")
+                            .label("Start")
+                            .primary()
+                            .rounded(px(16.0))
+                            .h(px(32.0))
+                            .disabled(self.running || self.busy)
+                            .on_click(
+                                cx.listener(|this, _, _, cx| this.operate(Operation::Start, cx)),
+                            ),
                     )
                     .child(
-                        button(
-                            "stop-server",
-                            "Stop",
-                            palette,
-                            false,
-                            self.running && !self.busy,
-                        )
-                        .on_click(cx.listener(|this, _, _, cx| this.operate(Operation::Stop, cx))),
+                        Button::new("stop-server")
+                            .label("Stop")
+                            .danger()
+                            .rounded(px(16.0))
+                            .h(px(32.0))
+                            .disabled(!self.running || self.busy)
+                            .on_click(
+                                cx.listener(|this, _, _, cx| this.operate(Operation::Stop, cx)),
+                            ),
                     )
                     .child(
-                        button(
-                            "restart-server",
-                            "Restart",
-                            palette,
-                            false,
-                            self.running && !self.busy,
-                        )
-                        .on_click(
-                            cx.listener(|this, _, _, cx| this.operate(Operation::Restart, cx)),
-                        ),
+                        Button::new("restart-server")
+                            .label("Restart")
+                            .rounded(px(16.0))
+                            .h(px(32.0))
+                            .disabled(!self.running || self.busy)
+                            .on_click(
+                                cx.listener(|this, _, _, cx| this.operate(Operation::Restart, cx)),
+                            ),
                     )
                     .child(div().flex_1())
                     .child(
                         div()
-                            .text_xs()
-                            .text_color(palette.muted)
-                            .child(if self.busy {
-                                "Working…"
-                            } else if self.running {
-                                "Running"
-                            } else {
-                                "Stopped"
-                            }),
+                            .px_3()
+                            .py_1()
+                            .rounded(px(16.0))
+                            .bg(palette.card_surface())
+                            .border_1()
+                            .border_color(palette.border)
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .child(div().size(px(8.0)).rounded_full().bg(status_color))
+                            .child(div().text_xs().text_color(status_color).child(status_label)),
                     ),
             )
             .children(self.status.as_ref().map(|status| {
@@ -192,14 +213,13 @@ impl Render for ServerScreen {
                         .border_color(palette.border)
                         .child(div().flex_1().min_w_0().child(self.command.clone()))
                         .child(
-                            button(
-                                "send-command",
-                                "Send",
-                                palette,
-                                true,
-                                self.running && !self.busy,
-                            )
-                            .on_click(cx.listener(|this, _, _, cx| this.send_command(cx))),
+                            Button::new("send-command")
+                                .label("Send")
+                                .primary()
+                                .rounded(px(16.0))
+                                .h(px(32.0))
+                                .disabled(!self.running || self.busy)
+                                .on_click(cx.listener(|this, _, _, cx| this.send_command(cx))),
                         ),
                 )
             })
@@ -214,21 +234,26 @@ fn section_tab(
     label: &'static str,
     icon: &'static str,
     active: bool,
-    palette: &ui::theme::Palette,
+    palette: &Palette,
 ) -> gpui::Stateful<gpui::Div> {
     let color = if active { palette.text } else { palette.muted };
+    let surface_hover = palette.surface_hover;
+    let text_color = palette.text;
     div()
         .id(id)
         .flex()
         .items_center()
         .gap_2()
         .px_3()
-        .py_2()
-        .rounded_md()
+        .py_1p5()
+        .rounded(px(12.0))
+        .text_xs()
+        .font_weight(FontWeight::MEDIUM)
+        .cursor_pointer()
         .text_color(color)
-        .when(active, |tab| tab.bg(palette.surface))
+        .when(active, |tab| tab.bg(surface_hover))
         .when(!active, |tab| {
-            tab.hover(|style| style.bg(palette.surface).text_color(palette.text))
+            tab.hover(move |style| style.text_color(text_color))
         })
         .child(svg().path(icon).size_4().text_color(color))
         .child(label)

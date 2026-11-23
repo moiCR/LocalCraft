@@ -1,19 +1,24 @@
 use super::create_server_view::input_field;
 use gpui::{
-    AppContext, Context, Entity, EventEmitter, FocusHandle, IntoElement, MouseButton, Render,
-    Window, div, prelude::*, px, rgba,
+    AppContext, Context, Entity, EventEmitter, FocusHandle, FontWeight, IntoElement, KeyDownEvent,
+    Render, Window, div, prelude::*, px,
 };
+use gpui_kit::base::Disableable;
 use services::{
     AppState,
     instance::{ServerInstance, configuration::validate_settings},
     software::pumpkin,
 };
-use ui::components::{button::button, input::Input};
+use ui::{
+    components::{Button, ButtonVariants, IconButton, Modal, input::Input},
+    theme::ActiveUiTheme,
+};
 
 pub enum SettingsEvent {
     Saved(ServerInstance),
     Close,
 }
+
 pub struct ServerSettings {
     server: ServerInstance,
     name: Entity<Input>,
@@ -24,7 +29,9 @@ pub struct ServerSettings {
     busy: bool,
     error: Option<String>,
 }
+
 impl EventEmitter<SettingsEvent> for ServerSettings {}
+
 impl ServerSettings {
     pub fn new(server: &ServerInstance, running: bool, cx: &mut Context<Self>) -> Self {
         Self {
@@ -38,11 +45,13 @@ impl ServerSettings {
             error: None,
         }
     }
+
     fn close(&self, cx: &mut Context<Self>) {
         if !self.busy {
             cx.emit(SettingsEvent::Close);
         }
     }
+
     fn save(&mut self, cx: &mut Context<Self>) {
         if self.busy || self.running {
             return;
@@ -105,9 +114,11 @@ impl ServerSettings {
         cx.notify();
     }
 }
+
 impl Render for ServerSettings {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let p = cx.global::<AppState>().theme_manager.palette();
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.ui_palette();
+        let viewport = window.viewport_size();
         let is_pumpkin = pumpkin::is_pumpkin(&self.server.software);
         let runtime = if is_pumpkin {
             "Native"
@@ -123,87 +134,141 @@ impl Render for ServerSettings {
                     _ => "Java",
                 })
         };
+        let entity = cx.entity().downgrade();
+
         div()
-            .id("server-settings-overlay")
+            .id("server-settings-modal-root")
             .absolute()
             .inset_0()
             .size_full()
-            .bg(rgba(0x00000099))
-            .flex()
-            .items_center()
-            .justify_center()
-            .p_4()
-            .occlude()
-            .on_mouse_down(
-                MouseButton::Left,
-                cx.listener(|this, _, _, cx| this.close(cx)),
-            )
+            .track_focus(&self.focus)
+            .capture_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+                if event.keystroke.key == "escape" {
+                    this.close(cx);
+                    cx.stop_propagation();
+                }
+            }))
             .child(
-                div()
-                    .id("server-settings-dialog")
-                    .w(px(440.))
-                    .max_w_full()
-                    .bg(p.background)
-                    .rounded_lg()
-                    .border_1()
-                    .border_color(p.border)
-                    .p_6()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .track_focus(&self.focus)
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
-                        if event.keystroke.key == "escape" {
-                            this.close(cx);
-                            cx.stop_propagation();
-                        }
-                    }))
-                    .child(div().text_lg().child("Server settings"))
-                    .child(input_field("Name", &self.name))
-                    .child(
+                Modal::new("server-settings-modal")
+                    .open(true)
+                    .compact()
+                    .fit_content()
+                    .width((viewport.width - px(32.0)).clamp(px(0.0), px(480.0)))
+                    .max_height((viewport.height - px(32.0)).max(px(0.0)))
+                    .header(
                         div()
                             .flex()
+                            .flex_none()
+                            .items_center()
+                            .justify_between()
                             .gap_3()
-                            .when(!is_pumpkin, |row| {
-                                row.child(input_field("Memory (MiB)", &self.ram))
-                            })
-                            .child(input_field("Port", &self.port)),
+                            .pl_1()
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Server settings"),
+                                    )
+                                    .child(div().text_xs().text_color(palette.muted).child(
+                                        format!(
+                                            "{} · {} · {}",
+                                            self.server.software, self.server.version, runtime
+                                        ),
+                                    )),
+                            )
+                            .child(
+                                IconButton::new("btn-close-server-settings", "icons/x.svg")
+                                    .size(px(32.0))
+                                    .color(palette.muted)
+                                    .hover_bg(palette.surface_hover)
+                                    .disabled(self.busy)
+                                    .tooltip("Close")
+                                    .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
+                            ),
                     )
-                    .child(div().text_xs().text_color(p.muted).child(format!(
-                        "{} · {} · {}",
-                        self.server.software, self.server.version, runtime
-                    )))
-                    .when(self.running, |el| {
-                        el.child(
-                            div()
-                                .text_color(p.muted)
-                                .child("Stop the server to edit its settings."),
-                        )
+                    .on_close(move |_, cx| {
+                        let _ = entity.update(cx, |this, cx| this.close(cx));
                     })
-                    .children(
-                        self.error.as_ref().map(|error| {
-                            div().text_color(gpui::rgb(0xe87878)).child(error.clone())
-                        }),
-                    )
                     .child(
                         div()
                             .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_3()
+                                    .rounded(px(16.0))
+                                    .bg(palette.card_surface())
+                                    .border_1()
+                                    .border_color(palette.border)
+                                    .p_4()
+                                    .text_color(palette.muted)
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .flex_col()
+                                            .gap_1p5()
+                                            .child(div().text_xs().child("Name"))
+                                            .child(self.name.clone()),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .gap_3()
+                                            .when(!is_pumpkin, |row| {
+                                                row.child(input_field("Memory (MiB)", &self.ram))
+                                            })
+                                            .child(input_field("Port", &self.port)),
+                                    ),
+                            )
+                            .when(self.running, |el| {
+                                el.child(
+                                    div()
+                                        .px_1()
+                                        .text_xs()
+                                        .text_color(palette.warning)
+                                        .child("Stop the server to edit its settings."),
+                                )
+                            })
+                            .children(self.error.as_ref().map(|error| {
+                                div()
+                                    .px_1()
+                                    .text_xs()
+                                    .text_color(palette.error)
+                                    .child(error.clone())
+                            })),
+                    )
+                    .footer(
+                        div()
+                            .flex()
+                            .flex_none()
+                            .items_center()
                             .justify_end()
                             .gap_2()
                             .child(
-                                button("close-server-settings", "Cancel", p, false, !self.busy)
+                                Button::new("close-server-settings")
+                                    .label("Cancel")
+                                    .rounded(px(16.0))
+                                    .h(px(32.0))
+                                    .disabled(self.busy)
                                     .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
                             )
                             .child(
-                                button(
-                                    "save-server-settings",
-                                    "Save",
-                                    p,
-                                    true,
-                                    !self.busy && !self.running,
-                                )
-                                .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
+                                Button::new("save-server-settings")
+                                    .label(if self.busy { "Saving…" } else { "Save" })
+                                    .primary()
+                                    .rounded(px(16.0))
+                                    .h(px(32.0))
+                                    .disabled(self.busy || self.running)
+                                    .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
                             ),
                     ),
             )
