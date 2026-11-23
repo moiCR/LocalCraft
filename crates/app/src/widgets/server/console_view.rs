@@ -295,11 +295,9 @@ impl Render for ConsoleView {
                             .inset_0()
                             .size_full()
                             .track_scroll(&self.console.scroll)
-                            .on_scroll_wheel(cx.listener(
-                                |this, _, _, _| {
-                                    this.console.pause_follow();
-                                },
-                            )),
+                            .on_scroll(cx.listener(|this, _, _, _| {
+                                this.console.pause_follow();
+                            })),
                         )
                     }),
             )

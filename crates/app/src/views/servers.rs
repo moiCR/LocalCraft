@@ -289,7 +289,7 @@ impl Servers {
                 cx.stop_propagation();
                 backdrop_entity.update(cx, |this, cx| this.close_delete_dialog(cx));
             })
-            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+            .on_scroll(|_, _, cx| cx.stop_propagation())
             .child(
                 div()
                     .w_full()

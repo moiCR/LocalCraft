@@ -1,5 +1,5 @@
 use super::*;
-use gpui::{ScrollDelta, ScrollWheelEvent, TestAppContext, TouchPhase, VisualTestContext, point};
+use gpui::{ScrollDelta, ScrollEvent, TestAppContext, TouchPhase, VisualTestContext, point};
 use services::{
     instance::{
         CONSOLE_CAPACITY, InstancesService,
@@ -159,7 +159,7 @@ fn console_layout_and_scroll_only_render_viewport_rows(cx: &mut TestAppContext) 
     let started = std::time::Instant::now();
     for _ in 0..30 {
         cx.update(|_, cx| console.read(cx).rendered_rows.set(0));
-        cx.simulate_event(ScrollWheelEvent {
+        cx.simulate_event(ScrollEvent {
             position: point(px(200.), px(200.)),
             delta: ScrollDelta::Pixels(point(px(0.), px(66.))),
             touch_phase: TouchPhase::Moved,
@@ -212,7 +212,7 @@ fn long_lines_stay_single_rows_and_copy_in_full(cx: &mut TestAppContext) {
     draw(cx);
     let console = cx.update(|_, cx| view.read(cx).console.clone());
     cx.update(|_, cx| console.read(cx).rendered_rows.set(0));
-    cx.simulate_event(ScrollWheelEvent {
+    cx.simulate_event(ScrollEvent {
         position: point(px(200.), px(200.)),
         delta: ScrollDelta::Pixels(point(px(0.), px(66.))),
         touch_phase: TouchPhase::Moved,

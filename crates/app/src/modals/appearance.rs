@@ -13,9 +13,9 @@ pub fn set_app_appearance(state: &mut AppState, cx: &mut App, appearance: Appear
     gpui_kit::component::theme::Theme::change(mode, None, cx);
 }
 
-use crate::workspace::Workspace;
+use crate::pages::layout::RootLayout;
 
-pub fn render(cx: &Context<Workspace>) -> impl IntoElement {
+pub fn render(cx: &Context<RootLayout>) -> impl IntoElement {
     let manager = &cx.global::<AppState>().theme_manager;
     let palette = manager.palette();
     let active = manager.appearance();

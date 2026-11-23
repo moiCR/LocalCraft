@@ -7,8 +7,9 @@ exclude = ["crates/.agents"]
 opt-level = 2
 
 [workspace.dependencies]
-gpui-pre = "0.3.6"
-gpui-router = { version = "0.5.0", default-features = false, features = ["gpui-pre", "font-kit", "wayland", "x11"] }
+gpui-pre = "=0.3.12"
+gpui-kit = "0.10.0"
+gpui-pages = { git = "https://github.com/moiCR/gpui-pages" }
 serde = {version = "1.0.229", features = ["derive"]}
 tokio = { version = "1.53.1", features = ["full"] }
 smol = "2"

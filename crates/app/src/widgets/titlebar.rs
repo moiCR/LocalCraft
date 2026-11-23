@@ -1,19 +1,26 @@
+use crate::pages::layout::RootLayout;
 use crate::widgets::updater;
-use crate::workspace::Workspace;
 use gpui::{
     Animation, AnimationExt, App, Context, CursorStyle, IntoElement, MouseButton, ResizeEdge,
     Window, WindowControlArea, div, prelude::*, px, rgb, svg,
 };
-use gpui_router::RouterState;
+use gpui_pages::router;
 use services::AppState;
 use std::time::Duration;
 use ui::theme::Palette;
 
-pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -> impl IntoElement {
+pub fn render(layout: &RootLayout, window: &Window, cx: &Context<RootLayout>) -> impl IntoElement {
     let palette = cx.global::<AppState>().theme_manager.palette();
     let maximized = window.is_maximized();
-    let sidebar_collapsed = !workspace.sidebar_motion.visible;
-    let sidebar_revision = workspace.sidebar_motion.revision;
+    let sidebar_collapsed = !layout.sidebar_motion.visible;
+    let sidebar_revision = layout.sidebar_motion.revision;
+    let active_router = router(window, cx);
+    let can_back = active_router
+        .as_ref()
+        .is_some_and(|manager| manager.read(cx).can_back());
+    let can_forward = active_router
+        .as_ref()
+        .is_some_and(|manager| manager.read(cx).can_forward());
     div()
         .flex()
         .items_center()
@@ -29,7 +36,7 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                 .child(
                     navigation_control(
                         "toggle-sidebar",
-                        if workspace.sidebar_motion.visible {
+                        if layout.sidebar_motion.visible {
                             "icons/panel-right-close.svg"
                         } else {
                             "icons/panel-right-open.svg"
@@ -53,35 +60,31 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                     navigation_control(
                         "navigate-back",
                         "icons/chevron-left.svg",
-                        workspace.navigation.can_go_back(),
+                        can_back,
                         palette,
                     )
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.navigation.go_back();
-                        let path = this.navigation.current.path();
-                        cx.update_global::<RouterState, _>(|router, _| {
-                            router.with_path(path.into());
-                        });
-                        window.refresh();
-                        cx.notify();
-                    })),
+                    .on_click(|_, window, cx| {
+                        if let Some(manager) = router(window, cx) {
+                            manager.update(cx, |manager, cx| {
+                                manager.back(cx);
+                            });
+                        }
+                    }),
                 )
                 .child(
                     navigation_control(
                         "navigate-forward",
                         "icons/chevron-right.svg",
-                        workspace.navigation.can_go_forward(),
+                        can_forward,
                         palette,
                     )
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.navigation.go_forward();
-                        let path = this.navigation.current.path();
-                        cx.update_global::<RouterState, _>(|router, _| {
-                            router.with_path(path.into());
-                        });
-                        window.refresh();
-                        cx.notify();
-                    })),
+                    .on_click(|_, window, cx| {
+                        if let Some(manager) = router(window, cx) {
+                            manager.update(cx, |manager, cx| {
+                                manager.forward(cx);
+                            });
+                        }
+                    }),
                 ),
         )
         .child({
@@ -128,7 +131,7 @@ pub fn render(workspace: &Workspace, window: &Window, cx: &Context<Workspace>) -
                     window.show_window_menu(event.position);
                 })
         })
-        .child(updater::titlebar_control(workspace, palette, cx))
+        .child(updater::titlebar_control(layout, palette, cx))
         .child(control(
             "window-minimize",
             "icons/minimize.svg",

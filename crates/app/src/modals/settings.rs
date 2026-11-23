@@ -7,9 +7,9 @@ use gpui::{
 use services::AppState;
 
 use super::appearance;
-use crate::workspace::Workspace;
+use crate::pages::layout::RootLayout;
 
-pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElement {
+pub fn render(layout: &RootLayout, cx: &Context<RootLayout>) -> impl IntoElement {
     let palette = cx.global::<AppState>().theme_manager.palette();
     div()
         .id("settings-overlay")
@@ -32,7 +32,7 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
         .child(
             div()
                 .id("settings-dialog")
-                .track_focus(&workspace.settings_focus)
+                .track_focus(&layout.settings_focus)
                 .w(px(480.))
                 .max_w_full()
                 .max_h_full()
@@ -128,14 +128,14 @@ pub fn render(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElemen
                                 .border_t_1()
                                 .border_color(palette.border)
                                 .p_6()
-                                .child(workspace.settings_preferences.clone()),
+                                .child(layout.settings_preferences.clone()),
                         )
                         .child(
                             div()
                                 .border_t_1()
                                 .border_color(palette.border)
                                 .p_6()
-                                .child(workspace.updater.clone()),
+                                .child(layout.updater.clone()),
                         ),
                 )
                 .child(

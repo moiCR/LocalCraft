@@ -222,11 +222,11 @@ impl Render for Updater {
 }
 
 pub fn titlebar_control(
-    workspace: &crate::workspace::Workspace,
+    layout: &crate::pages::layout::RootLayout,
     palette: &Palette,
-    cx: &Context<crate::workspace::Workspace>,
+    cx: &Context<crate::pages::layout::RootLayout>,
 ) -> impl IntoElement {
-    let status = workspace.updater.read(cx).status();
+    let status = layout.updater.read(cx).status();
     let show = matches!(
         status,
         UpdateStatus::Available

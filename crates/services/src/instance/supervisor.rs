@@ -124,11 +124,9 @@ fn terminate(child: &mut Child) {
     let _ = child.start_kill();
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
-
-    #[cfg(unix)]
     #[tokio::test]
     async fn commands_shutdown_and_final_output() -> Result<()> {
         let mut child = tokio::process::Command::new("/bin/sh")

@@ -1,22 +1,22 @@
-use crate::shell::SIDEBAR_DURATION;
-use crate::workspace::{Page, Workspace};
+use crate::pages::layout::RootLayout;
+use crate::shell::{Page, SIDEBAR_DURATION};
 use std::time::Duration;
 
 use gpui::{
-    Animation, AnimationExt, Context, IntoElement, div, ease_out_quint, prelude::*, px, svg,
+    Animation, AnimationExt, Context, IntoElement, Window, div, ease_out_quint, prelude::*, px, svg,
 };
-use gpui_router::RouterState;
+use gpui_pages::router;
 use services::AppState;
 
-pub fn panel(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElement {
-    let motion = &workspace.sidebar_motion;
+pub fn panel(layout: &RootLayout, window: &Window, cx: &Context<RootLayout>) -> impl IntoElement {
+    let motion = &layout.sidebar_motion;
     let revision = motion.revision;
     let (snapshot, target) = motion.endpoints();
     div()
         .h_full()
         .flex_shrink_0()
         .overflow_hidden()
-        .child(render(cx).with_animation(
+        .child(render(window, cx).with_animation(
             ("sidebar-slide", revision),
             Animation::new(SIDEBAR_DURATION),
             move |sidebar, progress| {
@@ -38,9 +38,11 @@ pub fn panel(workspace: &Workspace, cx: &Context<Workspace>) -> impl IntoElement
         )
 }
 
-fn render(cx: &Context<Workspace>) -> gpui::Div {
+fn render(window: &Window, cx: &Context<RootLayout>) -> gpui::Div {
     let palette = cx.global::<AppState>().theme_manager.palette();
-    let active_path = cx.global::<RouterState>().location.pathname.clone();
+    let active_path = router(window, cx)
+        .map(|manager| manager.read(cx).current_path().to_owned())
+        .unwrap_or_else(|| "/".to_owned());
     div()
         .flex()
         .flex_col()
@@ -81,8 +83,7 @@ fn render(cx: &Context<Workspace>) -> gpui::Div {
                 ]
                 .into_iter()
                 .map(|(page, label, id, icon)| {
-                    let selected = active_path.as_ref() == page.path()
-                        || (page == Page::Instances && active_path.as_ref() == "/");
+                    let selected = active_path.as_str() == page.path();
                     let surface = gpui::Hsla::from(palette.surface);
                     div()
                         .id(id)
@@ -104,14 +105,15 @@ fn render(cx: &Context<Workspace>) -> gpui::Div {
                             palette.muted
                         })
                         .hover(|style| style.bg(palette.surface).text_color(palette.text))
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.navigation.visit(page);
-                            cx.update_global::<RouterState, _>(|router, _| {
-                                router.with_path(page.path().into());
-                            });
-                            window.refresh();
-                            cx.notify();
-                        }))
+                        .on_click(move |_, window, cx| {
+                            if let Some(manager) = router(window, cx) {
+                                manager.update(cx, |manager, cx| {
+                                    if manager.current_path() != page.path() {
+                                        let _ = manager.navigate(page.path(), cx);
+                                    }
+                                });
+                            }
+                        })
                         .child(
                             svg()
                                 .path(icon)

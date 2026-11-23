@@ -1,11 +1,30 @@
-pub mod instances;
 pub mod playit;
 pub mod runtimes;
 pub mod servers;
 
-use gpui::{Animation, AnimationExt, Div, IntoElement, div, ease_out_quint, prelude::*, px};
-use std::time::Duration;
+use gpui::{App, AppContext, Div, Entity, Global, div, prelude::*};
 use ui::theme::Palette;
+
+pub struct AppViews {
+    pub servers: Entity<servers::Servers>,
+    pub runtimes: Entity<runtimes::Runtimes>,
+    pub playit: Entity<playit::Playit>,
+}
+
+impl Global for AppViews {}
+
+impl AppViews {
+    pub fn init(cx: &mut App) {
+        if cx.try_global::<Self>().is_none() {
+            let views = Self {
+                servers: cx.new(servers::Servers::new),
+                runtimes: cx.new(runtimes::Runtimes::new),
+                playit: cx.new(playit::Playit::new),
+            };
+            cx.set_global(views);
+        }
+    }
+}
 
 fn page(
     title: &'static str,
@@ -46,16 +65,4 @@ fn page(
                         .child(count),
                 ),
         )
-}
-
-pub fn animate_page(page: Div, name: &'static str) -> impl IntoElement {
-    page.with_animation(
-        name,
-        Animation::new(Duration::from_millis(240)).with_easing(ease_out_quint()),
-        |page, progress| {
-            page.relative()
-                .top(px(10.0 * (1.0 - progress)))
-                .opacity(progress)
-        },
-    )
 }
