@@ -1,6 +1,13 @@
 use gpui::{App, Context, Entity, IntoElement, Render, Subscription, Window, div, prelude::*, px};
+use gpui_kit::component::switch::Switch;
 use services::AppState;
-use ui::components::input::{Input, InputEvent};
+use ui::{
+    components::{
+        Button, ButtonVariants,
+        input::{Input, InputEvent},
+    },
+    theme::ActiveUiTheme,
+};
 
 const SOFTWARE: [&str; 6] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"];
 const JAVA_VERSIONS: [Option<u8>; 5] = [None, Some(8), Some(17), Some(21), Some(25)];
@@ -60,24 +67,21 @@ impl SettingsPreferences {
         });
     }
 
-    fn toggle_timestamps(&self, cx: &mut App) {
+    fn set_timestamps(&self, enabled: bool, cx: &mut App) {
         cx.update_global::<AppState, _>(|state, _| {
-            state.preferences.console_timestamps = !state.preferences.console_timestamps;
-            state.save_preferences();
+            if state.preferences.console_timestamps != enabled {
+                state.preferences.console_timestamps = enabled;
+                state.save_preferences();
+            }
         });
     }
 
-    fn toggle_auto_scroll(&self, cx: &mut App) {
+    fn set_auto_scroll(&self, enabled: bool, cx: &mut App) {
         cx.update_global::<AppState, _>(|state, _| {
-            state.preferences.console_auto_scroll = !state.preferences.console_auto_scroll;
-            state.save_preferences();
-        });
-    }
-
-    fn toggle_sidebar_collapsed(&self, cx: &mut App) {
-        cx.update_global::<AppState, _>(|state, _| {
-            state.preferences.sidebar_collapsed = !state.preferences.sidebar_collapsed;
-            state.save_preferences();
+            if state.preferences.console_auto_scroll != enabled {
+                state.preferences.console_auto_scroll = enabled;
+                state.save_preferences();
+            }
         });
     }
 }
@@ -85,95 +89,88 @@ impl SettingsPreferences {
 impl Render for SettingsPreferences {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let preferences = &cx.global::<AppState>().preferences;
-        let palette = cx.global::<AppState>().theme_manager.palette();
+        let palette = cx.ui_palette();
         let selected_software = preferences.default_software.as_str();
         let selected_java = preferences.default_java_major;
         let timestamps = preferences.console_timestamps;
         let auto_scroll = preferences.console_auto_scroll;
-        let sidebar_collapsed = preferences.sidebar_collapsed;
 
         div()
             .flex()
             .flex_col()
-            .gap_5()
+            .gap_3()
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .gap_3()
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child("Server creation")
-                            .child(
-                                div()
-                                    .text_sm()
-                                    .text_color(palette.muted)
-                                    .child("Choose the defaults for new servers."),
-                            ),
-                    )
+                    .rounded(px(16.0))
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .px_4()
+                    .py_1()
                     .child(
                         div()
                             .flex()
                             .flex_col()
                             .gap_2()
-                            .child(div().text_xs().text_color(palette.muted).child("Software"))
-                            .child(div().flex().gap_2().children(SOFTWARE.into_iter().map(
-                                |software| {
+                            .py_2p5()
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Default software"),
+                                    )
+                                    .child(
+                                        div().text_xs().text_color(palette.muted).child(
+                                            "Preselected server software for new instances.",
+                                        ),
+                                    ),
+                            )
+                            .child(div().flex().flex_wrap().gap_1p5().children(
+                                SOFTWARE.into_iter().map(|software| {
                                     let selected = selected_software == software;
-                                    div()
-                                        .id(software)
-                                        .px_3()
-                                        .py_2()
-                                        .rounded_md()
-                                        .border_1()
-                                        .border_color(if selected {
-                                            palette.text
+                                    let button = Button::new(software)
+                                        .label(if software == "Pumpkin" {
+                                            "Pumpkin · Exp"
                                         } else {
-                                            palette.border
+                                            software
                                         })
-                                        .bg(if selected {
-                                            palette.surface
-                                        } else {
-                                            palette.background
-                                        })
-                                        .cursor_pointer()
-                                        .hover(|style| style.border_color(palette.text))
+                                        .rounded(px(16.0))
+                                        .h(px(30.0))
                                         .on_click(cx.listener(move |this, _, _, cx| {
                                             this.select_software(software, cx);
-                                        }))
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .items_center()
-                                                .gap_2()
-                                                .child(software)
-                                                .when(software == "Pumpkin", |row| {
-                                                    row.child(
-                                                        div()
-                                                            .text_xs()
-                                                            .text_color(palette.muted)
-                                                            .child("Experimental"),
-                                                    )
-                                                }),
-                                        )
-                                },
-                            ))),
+                                        }));
+                                    if selected { button.primary() } else { button }
+                                }),
+                            )),
                     )
+                    .child(div().h(px(1.0)).w_full().bg(palette.border).opacity(0.6))
                     .child(
                         div()
                             .flex()
                             .items_center()
                             .justify_between()
                             .gap_4()
+                            .py_2p5()
                             .child(
                                 div()
                                     .flex()
                                     .flex_col()
-                                    .gap_1()
-                                    .child("Default memory")
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Default memory"),
+                                    )
                                     .child(
                                         div()
                                             .text_xs()
@@ -181,162 +178,124 @@ impl Render for SettingsPreferences {
                                             .child("512–262144 MiB"),
                                     ),
                             )
-                            .child(div().w(px(150.)).child(self.memory.clone())),
+                            .child(div().w(px(130.)).child(self.memory.clone())),
                     )
+                    .child(div().h(px(1.0)).w_full().bg(palette.border).opacity(0.6))
                     .child(
                         div()
                             .flex()
                             .flex_col()
                             .gap_2()
-                            .child(div().text_xs().text_color(palette.muted).child("Java"))
-                            .child(div().flex().gap_2().children(JAVA_VERSIONS.into_iter().map(
-                                |version| {
+                            .py_2p5()
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .font_weight(gpui::FontWeight::MEDIUM)
+                                    .text_color(palette.text)
+                                    .child("Default Java"),
+                            )
+                            .child(div().flex().flex_wrap().gap_1p5().children(
+                                JAVA_VERSIONS.into_iter().map(|version| {
                                     let selected = selected_java == version;
                                     let label = version
-                                        .map(|value| value.to_string())
+                                        .map(|value| format!("Java {value}"))
                                         .unwrap_or_else(|| "Recommended".into());
-                                    div()
-                                        .id(format!("default-java-{}", version.unwrap_or(0)))
-                                        .flex_1()
-                                        .flex()
-                                        .justify_center()
-                                        .px_2()
-                                        .py_2()
-                                        .rounded_md()
-                                        .border_1()
-                                        .border_color(if selected {
-                                            palette.text
-                                        } else {
-                                            palette.border
-                                        })
-                                        .bg(if selected {
-                                            palette.surface
-                                        } else {
-                                            palette.background
-                                        })
-                                        .cursor_pointer()
-                                        .hover(|style| style.border_color(palette.text))
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            this.select_java(version, cx);
-                                        }))
-                                        .child(label)
-                                },
-                            ))),
-                    ),
-            )
-            .child(
-                div()
-                    .border_t_1()
-                    .border_color(palette.border)
-                    .pt_4()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(
-                        div().flex().flex_col().gap_1().child("Workspace").child(
-                            div()
-                                .text_sm()
-                                .text_color(palette.muted)
-                                .child("Adjust the navigation sidebar."),
-                        ),
-                    )
-                    .child(toggle(
-                        "sidebar-collapse",
-                        "Collapse sidebar",
-                        sidebar_collapsed,
-                        palette,
-                        cx.listener(|this, _, _, cx| this.toggle_sidebar_collapsed(cx)),
-                    )),
-            )
-            .child(
-                div()
-                    .border_t_1()
-                    .border_color(palette.border)
-                    .pt_4()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(
-                        div().flex().flex_col().gap_1().child("Console").child(
-                            div()
-                                .text_sm()
-                                .text_color(palette.muted)
-                                .child("Choose how server output is displayed."),
-                        ),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .gap_3()
-                            .child(toggle(
-                                "console-timestamps",
-                                "Show timestamps",
-                                timestamps,
-                                palette,
-                                cx.listener(|this, _, _, cx| this.toggle_timestamps(cx)),
-                            ))
-                            .child(toggle(
-                                "console-auto-scroll",
-                                "Auto-scroll",
-                                auto_scroll,
-                                palette,
-                                cx.listener(|this, _, _, cx| this.toggle_auto_scroll(cx)),
+                                    let button = Button::new(format!(
+                                        "default-java-{}",
+                                        version.unwrap_or(0)
+                                    ))
+                                    .label(label)
+                                    .rounded(px(16.0))
+                                    .h(px(30.0))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.select_java(version, cx);
+                                    }));
+                                    if selected { button.primary() } else { button }
+                                }),
                             )),
                     ),
             )
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .rounded(px(16.0))
+                    .bg(palette.card_surface())
+                    .border_1()
+                    .border_color(palette.border)
+                    .px_4()
+                    .py_1()
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .gap_4()
+                            .py_2p5()
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Show timestamps"),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .text_color(palette.muted)
+                                            .child("Display timestamps on console lines."),
+                                    ),
+                            )
+                            .child(
+                                Switch::new("console-timestamps")
+                                    .checked(timestamps)
+                                    .accessibility_label("Show timestamps")
+                                    .on_change(cx.listener(|this, checked, _, cx| {
+                                        this.set_timestamps(*checked, cx);
+                                    })),
+                            ),
+                    )
+                    .child(div().h(px(1.0)).w_full().bg(palette.border).opacity(0.6))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .gap_4()
+                            .py_2p5()
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(palette.text)
+                                            .child("Auto-scroll"),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .text_color(palette.muted)
+                                            .child("Keep console pinned to the latest output."),
+                                    ),
+                            )
+                            .child(
+                                Switch::new("console-auto-scroll")
+                                    .checked(auto_scroll)
+                                    .accessibility_label("Auto-scroll")
+                                    .on_change(cx.listener(|this, checked, _, cx| {
+                                        this.set_auto_scroll(*checked, cx);
+                                    })),
+                            ),
+                    ),
+            )
     }
-}
-
-fn toggle(
-    id: &'static str,
-    label: &'static str,
-    selected: bool,
-    palette: &ui::theme::Palette,
-    on_click: impl Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static,
-) -> impl IntoElement {
-    let track = div()
-        .w(px(36.))
-        .h(px(20.))
-        .px_1()
-        .rounded_full()
-        .bg(if selected {
-            palette.accent
-        } else {
-            palette.surface
-        })
-        .flex()
-        .items_center()
-        .when(!selected, |track| {
-            track.border_1().border_color(palette.border)
-        });
-    let track = if selected {
-        track.justify_end()
-    } else {
-        track.justify_start()
-    };
-
-    div()
-        .id(id)
-        .flex_1()
-        .flex()
-        .items_center()
-        .justify_between()
-        .gap_3()
-        .min_w_0()
-        .px_3()
-        .py_2()
-        .rounded_md()
-        .border_1()
-        .border_color(palette.border)
-        .cursor_pointer()
-        .hover(|style| style.bg(palette.surface).border_color(palette.text))
-        .on_click(on_click)
-        .child(label)
-        .child(
-            track.child(div().size(px(14.)).rounded_full().bg(if selected {
-                palette.background
-            } else {
-                palette.text
-            })),
-        )
 }

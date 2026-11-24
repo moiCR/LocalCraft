@@ -1,4 +1,4 @@
-use crate::theme::{Appearance, Palette, Theme};
+use crate::theme::{Appearance, Palette, PrimaryColors, Theme};
 use gpui::rgb;
 
 pub struct LightTheme {
@@ -7,15 +7,27 @@ pub struct LightTheme {
 
 impl Default for LightTheme {
     fn default() -> Self {
+        let primary_fill = rgb(0x141414);
         Self {
             palette: Palette {
-                background: rgb(0xffffff),
-                sidebar: rgb(0xCFCFCF),
-                surface: rgb(0xCFCFCF),
-                border: rgb(0x9E9E9E),
-                text: rgb(0x0D0D0D),
+                background: rgb(0xfafafa),
+                sidebar: rgb(0xf4f4f5),
+                surface: rgb(0xffffff),
+                input_background: None,
+                surface_hover: rgb(0xececef),
+                border: rgb(0xd4d4d8),
+                text: rgb(0x0d0d0d),
                 muted: rgb(0x666666),
-                accent: rgb(0xB6B6B6),
+                accent: primary_fill,
+                primary: PrimaryColors {
+                    fill: primary_fill,
+                    border: primary_fill,
+                    text: rgb(0xffffff),
+                },
+                running: rgb(0x16a34a),
+                warning: rgb(0xb45309),
+                error: rgb(0xdc2626),
+                info: rgb(0x2563eb),
             },
         }
     }

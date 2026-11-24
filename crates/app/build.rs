@@ -5,6 +5,7 @@ const ICON_SIZES: [u32; 7] = [16, 24, 32, 48, 64, 128, 256];
 type IconImage = (u32, Vec<u8>);
 
 fn main() -> Result<(), Box<dyn Error>> {
+    gpui_pages::build()?;
     println!("cargo:rerun-if-changed=../assets/icons/logo.svg");
 
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is missing")?);

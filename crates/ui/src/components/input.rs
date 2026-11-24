@@ -9,6 +9,23 @@ use gpui::{
 };
 use unicode_segmentation::*;
 
+use crate::theme::ActiveUiTheme;
+
+pub fn themed_input(
+    state: &Entity<gpui_kit::component::input::InputState>,
+    cx: &App,
+) -> gpui_kit::component::input::Input {
+    let palette = cx.ui_palette();
+    let input = gpui_kit::component::input::Input::new(state)
+        .rounded(px(16.0))
+        .h(px(32.0));
+    if let Some(background) = palette.input_background {
+        input.bg(background)
+    } else {
+        input
+    }
+}
+
 actions!(
     text_input,
     [
@@ -685,6 +702,7 @@ impl Element for TextElement {
 
 impl Render for Input {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.ui_palette();
         div()
             .flex()
             .key_context("Input")
@@ -723,17 +741,21 @@ impl Render for Input {
             .opacity(if self.enabled { 1. } else { 0.5 })
             .when(!self.borderless, |element| {
                 element
+                    .bg(palette.card_surface())
                     .border_1()
-                    .border_color(rgba(0x88888855))
-                    .rounded_md()
-                    .focus(|style| style.border_color(rgba(0x888888ff)))
+                    .border_color(palette.border)
+                    .rounded(px(16.))
+                    .focus(move |style| style.border_color(palette.accent))
             })
-            .line_height(px(22.))
-            .text_size(px(14.))
+            .line_height(px(20.))
+            .text_size(px(13.))
+            .text_color(palette.text)
             .child(
                 div()
-                    .when(self.borderless, |element| element.h(px(30.)).px_0().py_1())
-                    .when(!self.borderless, |element| element.h(px(38.)).px_3().py_2())
+                    .flex()
+                    .items_center()
+                    .when(self.borderless, |element| element.h(px(30.)).px_0())
+                    .when(!self.borderless, |element| element.h(px(32.)).px_3())
                     .w_full()
                     .overflow_hidden()
                     .child(TextElement { input: cx.entity() }),

@@ -3,15 +3,17 @@
     windows_subsystem = "windows"
 )]
 
+mod components;
+mod layout;
 mod modals;
-mod shell;
-mod views;
-mod widgets;
-mod workspace;
+#[rustfmt::skip]
+#[path = "pages_modules.rs"]
+pub mod pages;
 
-use gpui::{App, AppContext, BorrowAppContext, Bounds, WindowBounds, WindowOptions, px, size};
-use gpui_router::{RouterState, init as router_init};
-use workspace::Workspace;
+use gpui::{App, AppContext, Bounds, WindowBounds, WindowOptions, px, size};
+use gpui_pages::{ApplicationExt, PageManager};
+
+gpui_pages::include_pages!();
 
 fn main() {
     let runtime = match services::instance::InstancesService::runtime() {
@@ -32,18 +34,12 @@ fn main() {
     let shutdown_capture = shutdown.clone();
     gpui_kit::application()
         .with_assets(assets::Assets)
-        .run(move |cx: &mut App| {
+        .use_pages()
+        .run_with(move |cx: &mut App| {
+            let appearance = state.theme_manager.appearance();
             cx.set_global(state);
-            router_init(cx);
-            cx.update_global::<RouterState, _>(|router, _| {
-                router.with_path("/instances".into());
-            });
             gpui_kit::init(cx);
-            let theme_mode = match cx.global::<services::AppState>().theme_manager.appearance() {
-                ui::theme::Appearance::Dark => gpui_kit::component::theme::ThemeMode::Dark,
-                ui::theme::Appearance::Light => gpui_kit::component::theme::ThemeMode::Light,
-            };
-            gpui_kit::component::theme::Theme::change(theme_mode, None, cx);
+            ui::theme::sync_component_theme(appearance, cx);
             ui::components::input::init(cx);
             cx.on_app_quit(move |cx| {
                 let mut servers = shutdown_capture
@@ -60,8 +56,18 @@ fn main() {
             if let Err(error) = cx.text_system().add_fonts(assets::load_fonts()) {
                 eprintln!("Failed to load application fonts: {error}");
             }
+            components::server_sessions::ServerSessions::init(cx);
+            components::updater::AppUpdater::init(cx);
+            let manager = match PageManager::new(PAGE_ROUTES, "/", cx) {
+                Ok(manager) => cx.new(|_| manager),
+                Err(error) => {
+                    eprintln!("Failed to initialize pages: {error}");
+                    cx.quit();
+                    return;
+                }
+            };
             let bounds = Bounds::centered(None, size(px(1100.), px(720.)), cx);
-            let result = cx.open_window(
+            let result = gpui_kit::open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     window_min_size: Some(size(px(720.), px(480.))),
@@ -69,9 +75,11 @@ fn main() {
                     window_decorations: Some(gpui::WindowDecorations::Client),
                     ..Default::default()
                 },
-                |window, cx| {
+                cx,
+                move |window, cx| {
+                    PageManager::attach(&manager, window, cx);
                     window.set_window_title("LocalCraft");
-                    cx.new(Workspace::new)
+                    manager
                 },
             );
             if let Err(error) = result {

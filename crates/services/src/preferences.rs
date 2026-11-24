@@ -19,7 +19,6 @@ pub struct AppPreferences {
     pub default_java_major: Option<u8>,
     pub console_timestamps: bool,
     pub console_auto_scroll: bool,
-    pub sidebar_collapsed: bool,
 }
 
 impl Default for AppPreferences {
@@ -31,7 +30,6 @@ impl Default for AppPreferences {
             default_java_major: None,
             console_timestamps: false,
             console_auto_scroll: true,
-            sidebar_collapsed: false,
         }
     }
 }
