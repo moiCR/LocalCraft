@@ -6,7 +6,7 @@ use gpui::{
 use gpui_kit::{base::Disableable, component::scroll::ScrollableElement};
 use services::{AppState, playit::PlayitSnapshot};
 use ui::{
-    components::{Button, ButtonVariants, card_surface},
+    components::{Button, ButtonVariants, IconButton, card_surface},
     theme::ActiveUiTheme,
 };
 
@@ -300,13 +300,17 @@ impl Render for Playit {
                                         .justify_end()
                                         .when(!installed, |actions| {
                                             actions.child(
-                                                action_button(
+                                                IconButton::new(
                                                     "install-playit-agent",
-                                                    "Install",
-                                                    self.busy,
-                                                    cx.listener(|this, _, _, cx| this.install(cx)),
+                                                    "icons/download.svg",
                                                 )
-                                                .primary(),
+                                                .tooltip("Install agent")
+                                                .color(palette.accent)
+                                                .background(palette.card_surface())
+                                                .disabled(self.busy)
+                                                .on_click(
+                                                    cx.listener(|this, _, _, cx| this.install(cx)),
+                                                ),
                                             )
                                         })
                                         .when(installed && !running && !connected, |actions| {
@@ -323,40 +327,58 @@ impl Render for Playit {
                                         .when(installed && !running && connected, |actions| {
                                             actions
                                                 .child(
-                                                    action_button(
+                                                    IconButton::new(
                                                         "start-playit-agent",
-                                                        "Start agent",
-                                                        self.busy,
-                                                        cx.listener(|this, _, _, cx| {
-                                                            this.start(cx)
-                                                        }),
+                                                        "icons/resume.svg",
                                                     )
-                                                    .primary(),
+                                                    .tooltip("Start agent")
+                                                    .color(palette.running)
+                                                    .background(palette.card_surface())
+                                                    .disabled(self.busy)
+                                                    .on_click(cx.listener(|this, _, _, cx| {
+                                                        this.start(cx)
+                                                    })),
                                                 )
-                                                .child(action_button(
-                                                    "update-playit-agent",
-                                                    "Update",
-                                                    self.busy,
-                                                    cx.listener(|this, _, _, cx| this.install(cx)),
-                                                ))
+                                                .child(
+                                                    IconButton::new(
+                                                        "update-playit-agent",
+                                                        "icons/download.svg",
+                                                    )
+                                                    .tooltip("Update agent")
+                                                    .background(palette.card_surface())
+                                                    .disabled(self.busy)
+                                                    .on_click(cx.listener(|this, _, _, cx| {
+                                                        this.install(cx)
+                                                    })),
+                                                )
                                         })
                                         .when(installed && running, |actions| {
                                             actions.child(
-                                                action_button(
+                                                IconButton::new(
                                                     "stop-playit-agent",
-                                                    "Stop agent",
-                                                    self.busy,
-                                                    cx.listener(|this, _, _, cx| this.stop(cx)),
+                                                    "icons/square.svg",
                                                 )
-                                                .danger(),
+                                                .tooltip("Stop agent")
+                                                .color(palette.error)
+                                                .background(palette.card_surface())
+                                                .disabled(self.busy)
+                                                .on_click(
+                                                    cx.listener(|this, _, _, cx| this.stop(cx)),
+                                                ),
                                             )
                                         })
-                                        .child(action_button(
-                                            "refresh-playit-agent",
-                                            "Refresh",
-                                            self.busy,
-                                            cx.listener(|this, _, _, cx| this.refresh(cx)),
-                                        )),
+                                        .child(
+                                            IconButton::new(
+                                                "refresh-playit-agent",
+                                                "icons/refresh-ccw.svg",
+                                            )
+                                            .tooltip("Refresh")
+                                            .background(palette.card_surface())
+                                            .disabled(self.busy)
+                                            .on_click(
+                                                cx.listener(|this, _, _, cx| this.refresh(cx)),
+                                            ),
+                                        ),
                                 ),
                         )
                         .child(
@@ -384,12 +406,14 @@ impl Render for Playit {
                                                 .child("Tunnel setup"),
                                         )
                                         .child(
-                                            Button::new("open-playit-dashboard")
-                                                .label("Open Playit dashboard")
-                                                .primary()
-                                                .rounded(px(16.0))
-                                                .h(px(32.0))
-                                                .on_click(|_, _, cx| cx.open_url(DASHBOARD_URL)),
+                                            IconButton::new(
+                                                "open-playit-dashboard",
+                                                "icons/external-link.svg",
+                                            )
+                                            .tooltip("Open Playit dashboard")
+                                            .color(palette.accent)
+                                            .background(palette.card_surface())
+                                            .on_click(|_, _, cx| cx.open_url(DASHBOARD_URL)),
                                         ),
                                 )
                                 .child(div().w_full().h(px(1.0)).bg(palette.border).opacity(0.6))

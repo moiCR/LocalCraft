@@ -3,7 +3,7 @@ use super::screen::{Operation, ServerScreen, ServerSection};
 use gpui::{Context, FontWeight, IntoElement, Render, Window, div, prelude::*, px};
 use gpui_kit::base::Disableable;
 use ui::{
-    components::{Button, ButtonVariants, card_surface},
+    components::{Button, ButtonVariants, IconButton, card_surface},
     theme::ActiveUiTheme,
 };
 
@@ -50,34 +50,31 @@ impl Render for ServerScreen {
                         div()
                             .flex()
                             .items_center()
-                            .gap_2()
+                            .gap_1p5()
                             .child(
-                                Button::new("start-server")
-                                    .label("Start")
-                                    .primary()
-                                    .rounded(px(16.0))
-                                    .h(px(32.0))
+                                IconButton::new("start-server", "icons/resume.svg")
+                                    .tooltip("Start server")
+                                    .color(palette.running)
+                                    .background(palette.card_surface())
                                     .disabled(self.running || self.busy)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.operate(Operation::Start, cx)
                                     })),
                             )
                             .child(
-                                Button::new("stop-server")
-                                    .label("Stop")
-                                    .danger()
-                                    .rounded(px(16.0))
-                                    .h(px(32.0))
+                                IconButton::new("stop-server", "icons/square.svg")
+                                    .tooltip("Stop server")
+                                    .color(palette.error)
+                                    .background(palette.card_surface())
                                     .disabled(!self.running || self.busy)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.operate(Operation::Stop, cx)
                                     })),
                             )
                             .child(
-                                Button::new("restart-server")
-                                    .label("Restart")
-                                    .rounded(px(16.0))
-                                    .h(px(32.0))
+                                IconButton::new("restart-server", "icons/refresh-ccw.svg")
+                                    .tooltip("Restart server")
+                                    .background(palette.card_surface())
                                     .disabled(!self.running || self.busy)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.operate(Operation::Restart, cx)

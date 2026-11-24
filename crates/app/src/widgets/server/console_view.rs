@@ -7,7 +7,10 @@ use gpui::{
 use services::{AppState, instance::console::ConsoleSnapshot};
 use std::{sync::Arc, time::Duration};
 use ui::{
-    components::input::{Input, InputEvent},
+    components::{
+        IconButton,
+        input::{Input, InputEvent},
+    },
     theme::ActiveUiTheme,
 };
 
@@ -149,23 +152,13 @@ impl Render for ConsoleView {
                         div()
                             .flex()
                             .items_center()
-                            .gap_2()
-                            .w(px(460.))
+                            .gap_1p5()
+                            .w(px(380.))
                             .child(div().flex_1().min_w_0().child(self.search.clone()))
                             .child(
-                                div()
-                                    .id("copy-console")
-                                    .px_2p5()
-                                    .py_1()
-                                    .rounded(px(16.0))
-                                    .bg(palette.card_surface())
-                                    .border_1()
-                                    .border_color(palette.border)
-                                    .text_xs()
-                                    .cursor_pointer()
-                                    .text_color(palette.muted)
-                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
-                                    .child("Copy all")
+                                IconButton::new("copy-console", "icons/copy.svg")
+                                    .tooltip("Copy all")
+                                    .background(palette.card_surface())
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         let text = this
                                             .console
@@ -180,46 +173,24 @@ impl Render for ConsoleView {
                                     })),
                             )
                             .child(
-                                div()
-                                    .id("clear-console")
-                                    .px_2p5()
-                                    .py_1()
-                                    .rounded(px(16.0))
-                                    .bg(palette.card_surface())
-                                    .border_1()
-                                    .border_color(palette.border)
-                                    .text_xs()
-                                    .cursor_pointer()
-                                    .text_color(palette.muted)
-                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
-                                    .child("Clear")
+                                IconButton::new("clear-console", "icons/trash.svg")
+                                    .tooltip("Clear console")
+                                    .background(palette.card_surface())
                                     .on_click(cx.listener(|this, _, _, cx| this.clear(cx))),
                             )
                             .child(
-                                div()
-                                    .id("follow-console")
-                                    .px_2p5()
-                                    .py_1()
-                                    .rounded(px(16.0))
-                                    .bg(palette.card_surface())
-                                    .border_1()
-                                    .border_color(if self.console.follow {
-                                        palette.accent
-                                    } else {
-                                        palette.border
-                                    })
-                                    .text_xs()
-                                    .cursor_pointer()
-                                    .text_color(if self.console.follow {
-                                        palette.text
-                                    } else {
-                                        palette.muted
-                                    })
-                                    .hover(|s| s.text_color(palette.text).bg(palette.surface_hover))
-                                    .child(if self.console.follow {
+                                IconButton::new("follow-console", "icons/arrow-big-down-dash.svg")
+                                    .tooltip(if self.console.follow {
                                         "Auto-scroll on"
                                     } else {
                                         "Auto-scroll off"
+                                    })
+                                    .background(palette.card_surface())
+                                    .selected(self.console.follow)
+                                    .color(if self.console.follow {
+                                        palette.accent
+                                    } else {
+                                        palette.muted
                                     })
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.console.follow = !this.console.follow;

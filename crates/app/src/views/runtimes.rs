@@ -10,7 +10,7 @@ use smol::Timer;
 use std::{path::PathBuf, process::Stdio, time::Duration};
 use tokio::sync::watch;
 use ui::{
-    components::{Button, ButtonVariants, ProgressBar, card_surface},
+    components::{IconButton, ProgressBar, card_surface},
     theme::{ActiveUiTheme, Palette},
 };
 
@@ -323,15 +323,17 @@ impl Render for Runtimes {
                                                 )),
                                         )
                                         .child(
-                                            Button::new("install-java-runtime")
-                                                .label("Install")
-                                                .primary()
-                                                .rounded(px(16.0))
-                                                .h(px(32.0))
-                                                .on_click(cx.listener(|this, _, _, cx| {
-                                                    let version = this.runtime_version;
-                                                    this.install_runtime(version, cx);
-                                                })),
+                                            IconButton::new(
+                                                "install-java-runtime",
+                                                "icons/download.svg",
+                                            )
+                                            .tooltip("Install runtime")
+                                            .color(palette.accent)
+                                            .background(palette.card_surface())
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                let version = this.runtime_version;
+                                                this.install_runtime(version, cx);
+                                            })),
                                         ),
                                 )
                                 .children(self.runtime_progress.as_ref().map(|progress| {

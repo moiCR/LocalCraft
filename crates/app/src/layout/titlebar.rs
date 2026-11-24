@@ -116,30 +116,18 @@ impl RenderOnce for Titlebar {
                 .into_any_element();
 
             let tabs = [
-                (
-                    ServerSection::Console,
-                    "server-tab-console",
-                    "Console",
-                    "icons/square-terminal.svg",
-                ),
-                (
-                    ServerSection::Logs,
-                    "server-tab-logs",
-                    "Logs",
-                    "icons/logs.svg",
-                ),
-                (
-                    ServerSection::Files,
-                    "server-tab-files",
-                    "Files",
-                    "icons/files.svg",
-                ),
+                (ServerSection::Console, "server-tab-console", "Console"),
+                (ServerSection::Logs, "server-tab-logs", "Logs"),
+                (ServerSection::Files, "server-tab-files", "Files"),
             ];
 
-            let center = switcher_track(&palette)
-                .children(tabs.into_iter().map(|(section, id, label, icon)| {
+            let center = div()
+                .flex()
+                .items_center()
+                .gap_1()
+                .children(tabs.into_iter().map(|(section, id, label)| {
                     let screen_target = screen.clone();
-                    switcher_tab(id, label, icon, active_section == section, &palette).on_click(
+                    switcher_tab(id, label, active_section == section, &palette).on_click(
                         move |_, _, cx| {
                             screen_target.update(cx, |this, cx| this.change_section(section, cx));
                         },
@@ -175,14 +163,17 @@ impl RenderOnce for Titlebar {
                 .into_any_element();
 
             let routes = [
-                ("nav-servers", "Servers", "icons/server.svg", "/"),
-                ("nav-runtimes", "Runtimes", "icons/coffee.svg", "/runtimes"),
-                ("nav-playit", "Playit", "icons/computer.svg", "/playit"),
+                ("nav-servers", "Servers", "/"),
+                ("nav-runtimes", "Runtimes", "/runtimes"),
+                ("nav-playit", "Playit", "/playit"),
             ];
 
-            let center = switcher_track(&palette)
-                .children(routes.into_iter().map(|(id, label, icon, path)| {
-                    switcher_tab(id, label, icon, current_path == path, &palette).on_click(
+            let center = div()
+                .flex()
+                .items_center()
+                .gap_1()
+                .children(routes.into_iter().map(|(id, label, path)| {
+                    switcher_tab(id, label, current_path == path, &palette).on_click(
                         move |_, window, cx| {
                             if let Some(manager) = router(window, cx) {
                                 manager.update(cx, |manager, cx| {
@@ -299,40 +290,21 @@ impl RenderOnce for Titlebar {
     }
 }
 
-fn switcher_track(palette: &Palette) -> Div {
-    div()
-        .flex()
-        .items_center()
-        .gap_1()
-        .p_1()
-        .rounded(px(16.0))
-        .bg(palette.card_surface())
-        .border_1()
-        .border_color(palette.border)
-}
-
 fn switcher_tab(
     id: &'static str,
     label: &'static str,
-    icon: &'static str,
     active: bool,
     palette: &Palette,
 ) -> Stateful<Div> {
     let text_color = palette.text;
     let surface_hover = palette.surface_hover;
-    let icon_color = if active {
-        palette.accent
-    } else {
-        palette.muted
-    };
     div()
         .id(id)
         .flex()
         .items_center()
-        .gap_1p5()
-        .h(px(28.0))
+        .h(px(30.0))
         .px_3()
-        .rounded(px(12.0))
+        .rounded(px(16.0))
         .text_xs()
         .font_weight(if active {
             FontWeight::SEMIBOLD
@@ -340,13 +312,11 @@ fn switcher_tab(
             FontWeight::MEDIUM
         })
         .text_color(if active { text_color } else { palette.muted })
+        .cursor_pointer()
         .when(active, |tab| tab.bg(surface_hover))
         .when(!active, |tab| {
-            tab.cursor_pointer()
-                .hover(move |style| style.text_color(text_color))
+            tab.hover(move |style| style.text_color(text_color).bg(surface_hover.opacity(0.5)))
         })
-        .when(active, |tab| tab.cursor_pointer())
-        .child(svg().path(icon).size(px(14.0)).text_color(icon_color))
         .child(label)
 }
 
