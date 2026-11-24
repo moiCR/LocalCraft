@@ -5,9 +5,10 @@ use ui::{
     theme::ActiveUiTheme,
 };
 
-use crate::{
-    views::AppViews,
-    widgets::{empty_state, server::screen::Operation},
+use crate::components::{
+    empty_state,
+    server::screen::Operation,
+    server_sessions::ServerSessions,
 };
 
 pub struct ServerLayout {
@@ -16,9 +17,9 @@ pub struct ServerLayout {
 
 impl PageLayout for ServerLayout {
     fn new(child: AnyView, cx: &mut Context<Self>) -> Self {
-        AppViews::init(cx);
-        let servers = cx.global::<AppViews>().servers.clone();
-        cx.observe(&servers, |_, _, cx| cx.notify()).detach();
+        ServerSessions::init(cx);
+        let sessions = cx.global::<ServerSessions>().0.clone();
+        cx.observe(&sessions, |_, _, cx| cx.notify()).detach();
         Self { child }
     }
 
@@ -31,8 +32,8 @@ impl PageLayout for ServerLayout {
         let server_id =
             router(window, cx).and_then(|manager| manager.read(cx).param("id").map(str::to_owned));
         let screen = server_id.as_deref().and_then(|id| {
-            cx.try_global::<AppViews>()
-                .and_then(|views| views.servers.read(cx).screen(id))
+            cx.try_global::<ServerSessions>()
+                .and_then(|sessions| sessions.0.read(cx).screen(id))
         });
 
         let Some(screen) = screen else {

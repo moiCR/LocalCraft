@@ -3,10 +3,9 @@ use gpui_pages::PageLayout;
 use ui::theme::ActiveUiTheme;
 
 use crate::{
+    components::{server_sessions::ServerSessions, updater::AppUpdater},
     layout::titlebar::{Titlebar, resize_handles},
     modals::{CreateServerModal, DeleteInstanceModal, SettingsModal},
-    views::AppViews,
-    widgets::updater::AppUpdater,
 };
 
 pub struct RootLayout {
@@ -15,10 +14,10 @@ pub struct RootLayout {
 
 impl PageLayout for RootLayout {
     fn new(child: AnyView, cx: &mut Context<Self>) -> Self {
-        AppViews::init(cx);
+        ServerSessions::init(cx);
         AppUpdater::init(cx);
-        let servers = cx.global::<AppViews>().servers.clone();
-        cx.observe(&servers, |_, _, cx| cx.notify()).detach();
+        let sessions = cx.global::<ServerSessions>().0.clone();
+        cx.observe(&sessions, |_, _, cx| cx.notify()).detach();
         Self { child }
     }
 

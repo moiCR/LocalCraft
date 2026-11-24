@@ -1,7 +1,7 @@
 use gpui::{Context, IntoElement, Window, div, prelude::*};
 use gpui_pages::{Page, PageAnimation, PageOptions, router};
 
-use crate::views::AppViews;
+use crate::components::server_sessions::ServerSessions;
 
 pub struct ServerLogsPage {
     refreshed_id: Option<String>,
@@ -9,7 +9,7 @@ pub struct ServerLogsPage {
 
 impl Page for ServerLogsPage {
     fn new(cx: &mut Context<Self>) -> Self {
-        AppViews::init(cx);
+        ServerSessions::init(cx);
         Self { refreshed_id: None }
     }
 
@@ -21,8 +21,8 @@ impl Page for ServerLogsPage {
         let server_id =
             router(window, cx).and_then(|manager| manager.read(cx).param("id").map(str::to_owned));
         let screen = server_id.as_deref().and_then(|id| {
-            cx.try_global::<AppViews>()
-                .and_then(|views| views.servers.read(cx).screen(id))
+            cx.try_global::<ServerSessions>()
+                .and_then(|sessions| sessions.0.read(cx).screen(id))
         });
 
         let Some(screen) = screen else {

@@ -3,13 +3,12 @@
     windows_subsystem = "windows"
 )]
 
+mod components;
 mod layout;
 mod modals;
 #[rustfmt::skip]
 #[path = "pages_modules.rs"]
 pub mod pages;
-mod views;
-mod widgets;
 
 use gpui::{App, AppContext, Bounds, WindowBounds, WindowOptions, px, size};
 use gpui_pages::{ApplicationExt, PageManager};
@@ -57,8 +56,8 @@ fn main() {
             if let Err(error) = cx.text_system().add_fonts(assets::load_fonts()) {
                 eprintln!("Failed to load application fonts: {error}");
             }
-            views::AppViews::init(cx);
-            widgets::updater::AppUpdater::init(cx);
+            components::server_sessions::ServerSessions::init(cx);
+            components::updater::AppUpdater::init(cx);
             let manager = match PageManager::new(PAGE_ROUTES, "/", cx) {
                 Ok(manager) => cx.new(|_| manager),
                 Err(error) => {

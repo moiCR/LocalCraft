@@ -12,7 +12,7 @@ use ui::components::{
     select::{Select, Selected},
 };
 
-use crate::views::AppViews;
+use crate::components::server_sessions::ServerSessions;
 
 pub const SOFTWARE: [&str; 6] = ["Paper", "Purpur", "Fabric", "Forge", "Vanilla", "Pumpkin"];
 
@@ -358,9 +358,9 @@ impl CreateServerForm {
                                     cx.update_global::<AppState, _>(|state, _| {
                                         state.instance_service.insert(server.clone());
                                     });
-                                    if let Some(views) = cx.try_global::<AppViews>() {
-                                        let servers = views.servers.clone();
-                                        servers.update(cx, |this, cx| {
+                                    if let Some(sessions) = cx.try_global::<ServerSessions>() {
+                                        let store = sessions.0.clone();
+                                        store.update(cx, |this, cx| {
                                             this.open_created_server(server, window, cx);
                                         });
                                     }

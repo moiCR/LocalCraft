@@ -6,7 +6,7 @@ use ui::{
     theme::ActiveUiTheme,
 };
 
-use crate::views::AppViews;
+use crate::components::server_sessions::ServerSessions;
 
 #[derive(Default, Clone)]
 pub struct DeleteInstanceModalState {
@@ -81,9 +81,9 @@ impl DeleteInstanceModal {
                         cx.update_global::<AppState, _>(|state, _| {
                             state.instance_service.remove(&id);
                         });
-                        if let Some(views) = cx.try_global::<AppViews>() {
-                            let servers = views.servers.clone();
-                            servers.update(cx, |this, cx| this.on_instance_deleted(&id, cx));
+                        if let Some(sessions) = cx.try_global::<ServerSessions>() {
+                            let store = sessions.0.clone();
+                            store.update(cx, |this, cx| this.on_instance_deleted(&id, cx));
                         }
                         cx.set_global(DeleteInstanceModalState::default());
                     }

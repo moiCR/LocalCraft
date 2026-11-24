@@ -6,15 +6,17 @@ use ui::{
     theme::ActiveUiTheme,
 };
 
-use crate::{views::AppViews, widgets::server::console_view::ConsoleView};
+use crate::components::{
+    server::console_view::ConsoleView, server_sessions::ServerSessions,
+};
 
 pub struct ServerConsolePage;
 
 impl Page for ServerConsolePage {
     fn new(cx: &mut Context<Self>) -> Self {
-        AppViews::init(cx);
-        let servers = cx.global::<AppViews>().servers.clone();
-        cx.observe(&servers, |_, _, cx| cx.notify()).detach();
+        ServerSessions::init(cx);
+        let sessions = cx.global::<ServerSessions>().0.clone();
+        cx.observe(&sessions, |_, _, cx| cx.notify()).detach();
         Self
     }
 
@@ -27,8 +29,8 @@ impl Page for ServerConsolePage {
         let screen = router(window, cx)
             .and_then(|manager| manager.read(cx).param("id").map(str::to_owned))
             .and_then(|id| {
-                cx.try_global::<AppViews>()
-                    .and_then(|views| views.servers.read(cx).screen(&id))
+                cx.try_global::<ServerSessions>()
+                    .and_then(|sessions| sessions.0.read(cx).screen(&id))
             });
 
         let Some(screen) = screen else {

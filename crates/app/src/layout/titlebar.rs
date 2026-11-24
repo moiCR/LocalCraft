@@ -7,9 +7,11 @@ use ui::{
 };
 
 use crate::{
+    components::{
+        server_sessions::ServerSessions,
+        updater::{AppUpdater, UpdateStatus},
+    },
     modals::{CreateServerModal, SettingsModalState, SettingsTab},
-    views::AppViews,
-    widgets::updater::{AppUpdater, UpdateStatus},
 };
 
 #[derive(IntoElement)]
@@ -42,8 +44,8 @@ impl RenderOnce for Titlebar {
 
         let active_server = server_id.and_then(|id| {
             let screen = cx
-                .try_global::<AppViews>()
-                .and_then(|views| views.servers.read(cx).screen(&id))?;
+                .try_global::<ServerSessions>()
+                .and_then(|sessions| sessions.0.read(cx).screen(&id))?;
             Some((id, screen))
         });
 

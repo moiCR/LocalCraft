@@ -6,7 +6,7 @@ use ui::{
 };
 
 use super::{appearance, settings_preferences::SettingsPreferences};
-use crate::widgets::updater::AppUpdater;
+use crate::components::updater::AppUpdater;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsTab {
