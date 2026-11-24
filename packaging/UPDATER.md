@@ -11,4 +11,4 @@ GitHub's `GITHUB_TOKEN` publishes assets and releases in this repository. No sep
 
 Windows builds the signed x64 NSIS installer. Linux builds signed x64 AppImage, Debian, and RPM packages. The Linux updater replaces AppImages atomically. Debian and RPM updates use `pkexec` with the system package manager. If authentication is canceled or installation fails, LocalCraft stays open and shows the release download page.
 
-Release tags must match the version in `crates/app/Cargo.toml`, such as `1.0.0` and `v1.0.0`. For a manual platform run, choose the source branch in GitHub Actions and enter the existing release tag. The branch must keep the same app version as that tag.
+Release tags must match the version in `crates/app/Cargo.toml`, such as `1.1.0` and `v1.1.0`. For a manual platform run, choose the source branch in GitHub Actions and enter the existing release tag. The branch must keep the same app version as that tag.
