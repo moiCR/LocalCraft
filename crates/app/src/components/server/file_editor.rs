@@ -91,26 +91,40 @@ impl Focusable for FileEditor {
 }
 
 impl Render for FileEditor {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.ui_palette();
+        let viewport = window.viewport_size();
+        let vw = f32::from(viewport.width);
+        let vh = f32::from(viewport.height);
+        let compact = vw < 860.0 || vh < 580.0;
+        let editor_text_size = if vw < 760.0 || vh < 520.0 {
+            px(11.5)
+        } else if compact {
+            px(12.5)
+        } else {
+            px(13.5)
+        };
+        let path_text_size = if compact { px(11.0) } else { px(12.0) };
+
         div()
+            .size_full()
             .flex()
             .flex_col()
-            .flex_1()
             .min_h_0()
             .min_w_0()
-            .gap_3()
+            .gap(if compact { px(8.0) } else { px(12.0) })
             .track_focus(&self.focus)
             .child(
                 div()
                     .flex()
                     .items_center()
                     .gap_2()
+                    .flex_shrink_0()
                     .child(
                         div()
                             .flex_1()
                             .min_w_0()
-                            .text_xs()
+                            .text_size(path_text_size)
                             .text_color(palette.muted)
                             .truncate()
                             .child(self.path.to_string_lossy().into_owned()),
@@ -144,14 +158,18 @@ impl Render for FileEditor {
                     .id("file-editor-lines")
                     .flex_1()
                     .min_h_0()
+                    .min_w_0()
+                    .w_full()
                     .bg(palette.card_surface())
                     .border_1()
                     .border_color(palette.border)
                     .rounded(px(16.0))
                     .overflow_hidden()
+                    .text_size(editor_text_size)
                     .child(
                         Textarea::new(&self.contents)
                             .h_full()
+                            .text_size(editor_text_size)
                             .appearance(false)
                             .bordered(false),
                     ),

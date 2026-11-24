@@ -5,7 +5,7 @@ use std::time::Duration;
 use gpui::{
     Anchor, Animation, AnimationExt, AppContext, Context, Entity, ExternalPaths, FontWeight,
     IntoElement, MouseButton, PathPromptOptions, Pixels, Point, Render, Subscription, Window,
-    anchored, div, ease_out_quint, point, prelude::*, px, svg,
+    anchored, deferred, div, ease_out_quint, point, prelude::*, px, svg,
 };
 use gpui_kit::base::Disableable;
 use services::{
@@ -385,13 +385,14 @@ impl FilesView {
         };
         let error = self.error.clone();
         let closing = self.closing;
+        let dialog_width = px((f32::from(viewport.width) - 32.0).clamp(280.0, 420.0));
         Some(
-            anchored()
-                .position(point(px(0.), px(0.)))
-                .child(
+            deferred(
+                anchored().position(point(px(0.), px(0.))).child(
                     div()
                         .w(viewport.width)
                         .h(viewport.height)
+                        .p_4()
                         .flex()
                         .items_center()
                         .justify_center()
@@ -404,7 +405,7 @@ impl FilesView {
                         )
                         .child(
                             div()
-                                .w(px(420.))
+                                .w(dialog_width)
                                 .max_w_full()
                                 .p_5()
                                 .flex()
@@ -488,8 +489,10 @@ impl FilesView {
                             },
                         )
                         .into_any_element(),
-                )
-                .into_any_element(),
+                ),
+            )
+            .with_priority(1)
+            .into_any_element(),
         )
     }
 }
@@ -899,64 +902,82 @@ impl Render for FilesView {
             .children(dialog)
             .children(context_menu)
             .when_some(editor, move |view, editor| {
+                let vw = f32::from(viewport.width);
+                let vh = f32::from(viewport.height);
+                let margin_x = (vw * 0.08).clamp(24.0, 64.0);
+                let margin_y = (vh * 0.1).clamp(32.0, 68.0);
+                let modal_w = (vw - margin_x * 2.0).clamp(320.0, 960.0);
+                let modal_h = (vh - margin_y * 2.0).clamp(280.0, 660.0);
+                let modal_pad = if modal_w < 680.0 || modal_h < 460.0 {
+                    px(12.0)
+                } else {
+                    px(20.0)
+                };
+
                 view.child(
-                    anchored()
-                        .position(point(px(0.), px(0.)))
-                        .child(
-                            div()
-                                .w(viewport.width)
-                                .h(viewport.height)
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .bg(gpui::rgba(0x00000099))
-                                .occlude()
-                                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                                .on_scroll(|_, _, cx| cx.stop_propagation())
-                                .child(
-                                    div()
-                                        .w_full()
-                                        .h_full()
-                                        .max_w(px(1100.))
-                                        .max_h(px(760.))
-                                        .p_5()
-                                        .flex()
-                                        .bg(palette.surface)
-                                        .border_1()
-                                        .border_color(palette.border)
-                                        .rounded(px(16.0))
-                                        .shadow_lg()
-                                        .child(editor)
-                                        .with_animation(
-                                            ("file-editor-panel", usize::from(closing)),
-                                            Animation::new(Duration::from_millis(260))
-                                                .with_easing(ease_out_quint()),
-                                            move |panel, progress| {
-                                                panel
-                                                    .relative()
-                                                    .top(px(10. * (1. - progress)))
-                                                    .opacity(if closing {
-                                                        1. - progress
-                                                    } else {
-                                                        progress
-                                                    })
-                                            },
-                                        ),
-                                )
-                                .with_animation(
-                                    ("file-editor-backdrop", usize::from(closing)),
-                                    Animation::new(Duration::from_millis(260)),
-                                    move |backdrop, progress| {
-                                        backdrop.opacity(if closing {
-                                            1. - progress
-                                        } else {
-                                            progress
-                                        })
-                                    },
-                                )
-                                .into_any_element(),
-                        )
-                        .into_any_element(),
+                    deferred(
+                        anchored()
+                            .position(point(px(0.), px(0.)))
+                            .child(
+                                div()
+                                    .w(viewport.width)
+                                    .h(viewport.height)
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .bg(gpui::rgba(0x00000099))
+                                    .occlude()
+                                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                        cx.stop_propagation()
+                                    })
+                                    .on_scroll(|_, _, cx| cx.stop_propagation())
+                                    .child(
+                                        div()
+                                            .w(px(modal_w))
+                                            .h(px(modal_h))
+                                            .p(modal_pad)
+                                            .flex()
+                                            .flex_col()
+                                            .min_h_0()
+                                            .min_w_0()
+                                            .bg(palette.surface)
+                                            .border_1()
+                                            .border_color(palette.border)
+                                            .rounded(px(16.0))
+                                            .shadow_lg()
+                                            .child(editor)
+                                            .with_animation(
+                                                ("file-editor-panel", usize::from(closing)),
+                                                Animation::new(Duration::from_millis(260))
+                                                    .with_easing(ease_out_quint()),
+                                                move |panel, progress| {
+                                                    panel
+                                                        .relative()
+                                                        .top(px(10. * (1. - progress)))
+                                                        .opacity(if closing {
+                                                            1. - progress
+                                                        } else {
+                                                            progress
+                                                        })
+                                                },
+                                            ),
+                                    )
+                                    .with_animation(
+                                        ("file-editor-backdrop", usize::from(closing)),
+                                        Animation::new(Duration::from_millis(260)),
+                                        move |backdrop, progress| {
+                                            backdrop.opacity(if closing {
+                                                1. - progress
+                                            } else {
+                                                progress
+                                            })
+                                        },
+                                    )
+                                    .into_any_element(),
+                            )
+                            .into_any_element(),
+                    )
+                    .with_priority(1),
                 )
             })
             .into_any_element()
