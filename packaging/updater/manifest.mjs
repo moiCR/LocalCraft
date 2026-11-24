@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const RELEASES = "https://github.com/moiCR/LocalCraft/releases/download/";
@@ -46,12 +46,17 @@ function validateTag(tag, version) {
 async function seed(args) {
   const output = required(args, "out");
   const previous = args.get("previous");
+  const notesFile = args.get("notes-file");
   const manifest = previous
     ? await readJson(previous)
     : { version: "0.0.0", notes: "", pub_date: new Date().toISOString(), platforms: {} };
   if (!manifest.platforms || typeof manifest.platforms !== "object") {
     throw new Error("Previous updater manifest has no platform map.");
   }
+  if (notesFile) {
+    manifest.notes = await readFile(notesFile, "utf8");
+  }
+  manifest.pub_date = new Date().toISOString();
   await writeJson(output, manifest);
 }
 
@@ -79,7 +84,12 @@ async function fragment(args) {
 
   const platforms = {};
   for (const artifact of artifacts) {
-    const signatureText = (await readFile(path.join(directory, `${artifact.name}.sig`), "utf8")).trim();
+    const artifactPath = path.join(directory, artifact.name);
+    const [{ size }, signatureRaw] = await Promise.all([
+      stat(artifactPath),
+      readFile(`${artifactPath}.sig`, "utf8"),
+    ]);
+    const signatureText = signatureRaw.trim();
     if (!signatureText) {
       throw new Error(`Missing signature for ${artifact.name}`);
     }
@@ -87,6 +97,7 @@ async function fragment(args) {
     platforms[artifact.key] = {
       signature: signatureText,
       url,
+      size,
     };
   }
   await mkdir(path.dirname(output), { recursive: true });
@@ -125,6 +136,7 @@ async function merge(args) {
   const manifestPath = required(args, "manifest");
   const fragmentPath = required(args, "fragment");
   const output = required(args, "out");
+  const notesFile = args.get("notes-file");
   validateTag(tag, version);
   const manifest = await readJson(manifestPath);
   const fragmentManifest = await readJson(fragmentPath);
@@ -138,6 +150,10 @@ async function merge(args) {
     ),
   );
   manifest.version = version;
+  if (notesFile) {
+    manifest.notes = await readFile(notesFile, "utf8");
+  }
+  manifest.pub_date = new Date().toISOString();
   manifest.platforms = mergePlatformMaps(existingReleasePlatforms, fragmentManifest);
   await writeJson(output, manifest);
 }

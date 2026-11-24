@@ -176,6 +176,7 @@ jobs:
           node packaging/updater/manifest.mjs merge \
             --version "${RELEASE_TAG#v}" \
             --tag "$RELEASE_TAG" \
+            --notes-file CHANGELOG.md \
             --manifest target/updater-manifest/latest.json \
             --fragment target/updater-manifest/platform.json \
             --out target/updater-manifest/latest.json

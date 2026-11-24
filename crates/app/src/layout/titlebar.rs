@@ -59,7 +59,15 @@ impl RenderOnce for Titlebar {
                         .unwrap_or_else(|| "Update available".to_owned()),
                     false,
                 )),
-                UpdateStatus::Downloading => Some(("Updating…".to_owned(), true)),
+                UpdateStatus::Downloading => {
+                    let label = updater
+                        .progress_percent()
+                        .map(|pct| format!("Updating {pct}%"))
+                        .unwrap_or_else(|| "Updating…".to_owned());
+                    Some((label, true))
+                }
+                UpdateStatus::Verifying => Some(("Verifying…".to_owned(), true)),
+                UpdateStatus::Installing => Some(("Installing…".to_owned(), true)),
                 _ => None,
             }
         });

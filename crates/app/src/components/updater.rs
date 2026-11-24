@@ -1,10 +1,15 @@
+use std::{sync::Arc, time::Duration};
+
 use gpui::{
     App, AppContext, Context, Entity, Global, IntoElement, Render, Window, div, prelude::*, px, svg,
 };
 use gpui_kit::{base::Disableable, component::scroll::ScrollableElement};
-use services::{AppState, updater::UpdaterService};
+use services::{
+    AppState,
+    updater::{UpdatePhase, UpdateProgress, UpdaterService},
+};
 use ui::{
-    components::{Button, ButtonVariants},
+    components::{Button, ButtonVariants, ProgressBar},
     theme::ActiveUiTheme,
 };
 
@@ -28,6 +33,8 @@ pub enum UpdateStatus {
     Checking,
     Available,
     Downloading,
+    Verifying,
+    Installing,
     UpToDate,
     Error,
 }
@@ -37,6 +44,9 @@ pub struct Updater {
     update: Option<services::updater::AvailableUpdate>,
     status: UpdateStatus,
     error: Option<String>,
+    progress: Option<Arc<UpdateProgress>>,
+    downloaded_bytes: u64,
+    total_bytes: u64,
 }
 
 impl Updater {
@@ -47,6 +57,9 @@ impl Updater {
             update: None,
             status: UpdateStatus::Idle,
             error: None,
+            progress: None,
+            downloaded_bytes: 0,
+            total_bytes: 0,
         };
         if updater.service.is_some() {
             updater.check(true, cx);
@@ -65,10 +78,20 @@ impl Updater {
         self.update.as_ref().map(|update| update.version.as_str())
     }
 
+    pub fn progress_percent(&self) -> Option<u32> {
+        if self.total_bytes == 0 {
+            return None;
+        }
+        Some(((self.downloaded_bytes.saturating_mul(100)) / self.total_bytes).min(100) as u32)
+    }
+
     pub fn activate(&mut self, cx: &mut Context<Self>) {
         match self.status {
             UpdateStatus::Available => self.install(cx),
-            UpdateStatus::Checking | UpdateStatus::Downloading => {}
+            UpdateStatus::Checking
+            | UpdateStatus::Downloading
+            | UpdateStatus::Verifying
+            | UpdateStatus::Installing => {}
             UpdateStatus::Idle | UpdateStatus::UpToDate | UpdateStatus::Error => {
                 self.check(false, cx)
             }
@@ -79,9 +102,19 @@ impl Updater {
         let Some(service) = self.service.clone() else {
             return;
         };
+        if matches!(
+            self.status,
+            UpdateStatus::Checking
+                | UpdateStatus::Downloading
+                | UpdateStatus::Verifying
+                | UpdateStatus::Installing
+        ) {
+            return;
+        }
         self.status = UpdateStatus::Checking;
         self.error = None;
         cx.notify();
+        cx.refresh_windows();
 
         let runtime = cx.global::<AppState>().background_runtime.clone();
         let task = runtime.spawn(async move { service.check(env!("CARGO_PKG_VERSION")).await });
@@ -116,6 +149,7 @@ impl Updater {
                     }
                 }
                 cx.notify();
+                cx.refresh_windows();
             });
         })
         .detach();
@@ -125,23 +159,80 @@ impl Updater {
         let (Some(service), Some(update)) = (self.service.clone(), self.update.clone()) else {
             return;
         };
+        if !update.can_auto_install() {
+            cx.open_url(&update.release_page);
+            return;
+        }
+        if self.progress.is_some() {
+            return;
+        }
+
+        let progress = Arc::new(UpdateProgress::default());
+        self.progress = Some(Arc::clone(&progress));
+        self.downloaded_bytes = 0;
+        self.total_bytes = update.expected_size.unwrap_or(0);
         self.status = UpdateStatus::Downloading;
         self.error = None;
         cx.notify();
+        cx.refresh_windows();
+
+        let progress_poll = Arc::clone(&progress);
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(Duration::from_millis(50))
+                    .await;
+                let updated = this.update(cx, |this, cx| {
+                    let Some(active) = &this.progress else {
+                        return false;
+                    };
+                    if !Arc::ptr_eq(active, &progress_poll) {
+                        return false;
+                    }
+                    let downloaded = progress_poll.downloaded();
+                    let total = progress_poll.total();
+                    let next_status = match progress_poll.phase() {
+                        UpdatePhase::Downloading => UpdateStatus::Downloading,
+                        UpdatePhase::Verifying => UpdateStatus::Verifying,
+                        UpdatePhase::Installing => UpdateStatus::Installing,
+                    };
+                    if next_status != this.status
+                        || downloaded != this.downloaded_bytes
+                        || total != this.total_bytes
+                    {
+                        this.status = next_status;
+                        this.downloaded_bytes = downloaded;
+                        this.total_bytes = total;
+                        cx.notify();
+                        cx.refresh_windows();
+                    }
+                    true
+                });
+                if !matches!(updated, Ok(true)) {
+                    break;
+                }
+            }
+        })
+        .detach();
 
         let runtime = cx.global::<AppState>().background_runtime.clone();
-        let task = runtime.spawn(async move { service.download_and_install(&update).await });
+        let task =
+            runtime.spawn(async move { service.download_and_install(&update, progress).await });
         cx.spawn(async move |this, cx| {
             let result = task
                 .await
                 .map_err(|error| format!("Update installation task failed: {error}"))
                 .and_then(|result| result.map_err(|error| format!("{error:#}")));
-            let _ = this.update(cx, |this, cx| match result {
-                Ok(()) => cx.quit(),
-                Err(error) => {
-                    this.status = UpdateStatus::Error;
-                    this.error = Some(error);
-                    cx.notify();
+            let _ = this.update(cx, |this, cx| {
+                this.progress = None;
+                match result {
+                    Ok(()) => cx.quit(),
+                    Err(error) => {
+                        this.status = UpdateStatus::Error;
+                        this.error = Some(error);
+                        cx.notify();
+                        cx.refresh_windows();
+                    }
                 }
             });
         })
@@ -152,16 +243,40 @@ impl Updater {
 impl Render for Updater {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.ui_palette();
+        let can_auto_install = self
+            .update
+            .as_ref()
+            .is_some_and(services::updater::AvailableUpdate::can_auto_install);
+        let release_page = self
+            .update
+            .as_ref()
+            .map(|update| update.release_page.clone());
+
         let button_label = match self.status {
-            UpdateStatus::Idle | UpdateStatus::Error => "Check for updates".to_owned(),
+            UpdateStatus::Idle => "Check for updates".to_owned(),
             UpdateStatus::Checking => "Checking…".into(),
-            UpdateStatus::Available => self
-                .version()
-                .map(|version| format!("Install v{version}"))
-                .unwrap_or_else(|| "Install update".into()),
-            UpdateStatus::Downloading => "Updating…".into(),
+            UpdateStatus::Available => {
+                if can_auto_install {
+                    self.version()
+                        .map(|version| format!("Install v{version}"))
+                        .unwrap_or_else(|| "Install update".into())
+                } else {
+                    "View release".into()
+                }
+            }
+            UpdateStatus::Downloading => "Downloading…".into(),
+            UpdateStatus::Verifying => "Verifying…".into(),
+            UpdateStatus::Installing => "Installing…".into(),
             UpdateStatus::UpToDate => "Check again".into(),
+            UpdateStatus::Error => {
+                if can_auto_install {
+                    "Retry".into()
+                } else {
+                    "Check for updates".into()
+                }
+            }
         };
+
         let description = match self.status {
             UpdateStatus::Idle => format!(
                 "Current version v{}. Check GitHub for new releases.",
@@ -172,24 +287,57 @@ impl Render for Updater {
                 .version()
                 .map(|version| format!("Version v{version} is ready to install."))
                 .unwrap_or_else(|| "A new update is available.".to_owned()),
-            UpdateStatus::Downloading => "Downloading and installing update…".to_owned(),
+            UpdateStatus::Downloading => {
+                let downloaded_mb = self.downloaded_bytes as f64 / 1_048_576.0;
+                if self.total_bytes > 0 {
+                    let total_mb = self.total_bytes as f64 / 1_048_576.0;
+                    let pct = self.progress_percent().unwrap_or(0);
+                    format!("Downloading update: {downloaded_mb:.1} MB / {total_mb:.1} MB ({pct}%)")
+                } else {
+                    format!("Downloading update: {downloaded_mb:.1} MB…")
+                }
+            }
+            UpdateStatus::Verifying => "Verifying package signature…".to_owned(),
+            UpdateStatus::Installing => "Installing update and restarting…".to_owned(),
             UpdateStatus::UpToDate => {
                 format!("LocalCraft v{} is up to date.", env!("CARGO_PKG_VERSION"))
             }
-            UpdateStatus::Error => "Could not complete update check.".to_owned(),
+            UpdateStatus::Error => "Could not complete update.".to_owned(),
         };
+
         let busy = matches!(
             self.status,
-            UpdateStatus::Checking | UpdateStatus::Downloading
+            UpdateStatus::Checking
+                | UpdateStatus::Downloading
+                | UpdateStatus::Verifying
+                | UpdateStatus::Installing
         );
         let available = self.status == UpdateStatus::Available;
+        let retry_install = self.status == UpdateStatus::Error && can_auto_install;
         let button = Button::new("check-app-updates")
             .label(button_label)
             .rounded(px(16.0))
             .h(px(32.0))
             .disabled(busy)
-            .on_click(cx.listener(|this, _, _, cx| this.activate(cx)));
+            .on_click(cx.listener(move |this, _, _, cx| {
+                if retry_install {
+                    this.install(cx);
+                } else {
+                    this.activate(cx);
+                }
+            }));
         let button = if available { button.primary() } else { button };
+
+        let secondary_release = release_page.filter(|_| {
+            matches!(self.status, UpdateStatus::Available if can_auto_install)
+                || self.status == UpdateStatus::Error
+        });
+
+        let progress_percent = (self.status == UpdateStatus::Downloading && self.total_bytes > 0)
+            .then(|| {
+                ((self.downloaded_bytes as f64 / self.total_bytes as f64) * 100.0).clamp(0.0, 100.0)
+                    as f32
+            });
 
         div()
             .flex()
@@ -245,8 +393,28 @@ impl Render for Updater {
                             )
                             .child(div().text_xs().text_color(palette.muted).child(description)),
                     )
-                    .child(button),
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .when_some(secondary_release, |row, url| {
+                                row.child(
+                                    Button::new("view-app-release")
+                                        .label("View release")
+                                        .rounded(px(16.0))
+                                        .h(px(32.0))
+                                        .on_click(move |_, _, cx| cx.open_url(&url)),
+                                )
+                            })
+                            .child(button),
+                    ),
             )
+            .when_some(progress_percent, |element, percent| {
+                element.child(
+                    ProgressBar::new("updater-download-progress", percent).color(palette.accent),
+                )
+            })
             .when_some(self.error.as_ref(), |element, error| {
                 element.child(
                     div()
