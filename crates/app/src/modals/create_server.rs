@@ -361,7 +361,7 @@ impl CreateServerForm {
                                     if let Some(views) = cx.try_global::<AppViews>() {
                                         let servers = views.servers.clone();
                                         servers.update(cx, |this, cx| {
-                                            this.open_created_server(server, cx);
+                                            this.open_created_server(server, window, cx);
                                         });
                                     }
                                     this.close(window, cx);

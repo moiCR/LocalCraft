@@ -5,6 +5,7 @@ use gpui::{
     MouseButton, Pixels, Point, Render, ScrollDelta, SharedString, Subscription, Window, anchored,
     canvas, div, point, prelude::*, px, svg,
 };
+use gpui_pages::router;
 use services::{
     AppState,
     instance::ServerInstance,
@@ -21,10 +22,7 @@ use super::spatial_canvas::{
 };
 use crate::{
     modals::{CreateServerModal, DeleteInstanceModal},
-    widgets::{
-        empty_state,
-        server::screen::{Back, ServerScreen},
-    },
+    widgets::{empty_state, server::screen::ServerScreen},
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -49,8 +47,7 @@ enum Interaction {
 
 pub struct Servers {
     screens: HashMap<String, Entity<ServerScreen>>,
-    selected: Option<String>,
-    subscriptions: HashMap<String, Vec<Subscription>>,
+    subscriptions: HashMap<String, Subscription>,
     instance_menu: Option<(String, Point<Pixels>)>,
     canvas_bounds: Rc<Cell<Bounds<Pixels>>>,
     interaction: Interaction,
@@ -70,7 +67,6 @@ impl Servers {
         });
         Self {
             screens: HashMap::new(),
-            selected: None,
             subscriptions: HashMap::new(),
             instance_menu: None,
             canvas_bounds: Rc::default(),
@@ -81,17 +77,8 @@ impl Servers {
         }
     }
 
-    pub fn active_screen(&self) -> Option<Entity<ServerScreen>> {
-        self.selected
-            .as_ref()
-            .and_then(|id| self.screens.get(id))
-            .cloned()
-    }
-
-    pub fn close_active_server(&mut self, cx: &mut Context<Self>) {
-        if self.selected.take().is_some() {
-            cx.notify();
-        }
+    pub fn screen(&self, id: &str) -> Option<Entity<ServerScreen>> {
+        self.screens.get(id).cloned()
     }
 
     fn add(&mut self, server: ServerInstance, cx: &mut Context<Self>) {
@@ -100,17 +87,12 @@ impl Servers {
         }
         let id = server.id.clone();
         let screen = cx.new(|cx| ServerScreen::new(server, cx));
-        let back_sub = cx.subscribe(&screen, |this, _, _: &Back, cx| {
-            this.selected = None;
-            cx.notify();
-        });
         let state_sub = cx.observe(&screen, |_, _, cx| cx.notify());
-        self.subscriptions
-            .insert(id.clone(), vec![back_sub, state_sub]);
+        self.subscriptions.insert(id.clone(), state_sub);
         self.screens.insert(id, screen);
     }
 
-    fn open_server(&mut self, server: ServerInstance, cx: &mut Context<Self>) {
+    fn open_server(&mut self, server: ServerInstance, window: &mut Window, cx: &mut Context<Self>) {
         self.instance_menu = None;
         let id = server.id.clone();
         if self.screens.contains_key(&id) {
@@ -120,28 +102,31 @@ impl Servers {
         } else {
             self.add(server, cx);
         }
-        self.selected = Some(id);
+        navigate_to_server(&id, window, cx);
         cx.notify();
     }
 
-    pub fn open_created_server(&mut self, server: ServerInstance, cx: &mut Context<Self>) {
-        self.add(server.clone(), cx);
+    pub fn open_created_server(
+        &mut self,
+        server: ServerInstance,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let id = server.id.clone();
+        self.add(server, cx);
         let ordered_ids = sorted_server_ids(cx.global::<AppState>().instance_service.servers());
         cx.update_global::<AppState, _>(|state, _| {
             if state.topology.ensure_positions(&ordered_ids) {
                 state.save_topology();
             }
         });
-        self.selected = Some(server.id);
+        navigate_to_server(&id, window, cx);
         cx.notify();
     }
 
     pub fn on_instance_deleted(&mut self, id: &str, cx: &mut Context<Self>) {
         self.screens.remove(id);
         self.subscriptions.remove(id);
-        if self.selected.as_deref() == Some(id) {
-            self.selected = None;
-        }
         if self
             .instance_menu
             .as_ref()
@@ -334,11 +319,6 @@ impl Servers {
 impl Render for Servers {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.ui_palette();
-        if let Some(screen) = self.active_screen() {
-            return super::canvas_outer(&palette)
-                .child(screen)
-                .into_any_element();
-        }
 
         let (servers, positions, topology) = self.resolved_topology(cx.global::<AppState>());
         let zoom = topology.zoom;
@@ -606,9 +586,6 @@ impl Render for Servers {
                     .overflow_hidden()
                     .track_focus(&self.focus)
                     .on_scroll(cx.listener(|this, event: &gpui::ScrollEvent, _, cx| {
-                        if this.selected.is_some() {
-                            return;
-                        }
                         let delta_y = match event.delta {
                             ScrollDelta::Pixels(delta) => f32::from(delta.y),
                             ScrollDelta::Lines(delta) => delta.y * 28.0,
@@ -737,7 +714,7 @@ impl Render for Servers {
                     }))
                     .on_mouse_up(
                         MouseButton::Left,
-                        cx.listener(|this, _, _, cx| {
+                        cx.listener(|this, _, window, cx| {
                             let previous =
                                 std::mem::replace(&mut this.interaction, Interaction::Idle);
                             match previous {
@@ -759,7 +736,7 @@ impl Render for Servers {
                                         .find(|server| server.id == id)
                                         .cloned()
                                     {
-                                        this.open_server(server, cx);
+                                        this.open_server(server, window, cx);
                                     }
                                     cx.notify();
                                 }
@@ -1083,6 +1060,19 @@ fn node_pin(
     match side {
         PinSide::Left => pin_el.left(px(-pin_size * 0.5)),
         PinSide::Right => pin_el.right(px(-pin_size * 0.5)),
+    }
+}
+
+fn navigate_to_server(id: &str, window: &mut Window, cx: &mut Context<Servers>) {
+    let target = format!("/servers/{id}");
+    if let Some(manager) = router(window, cx) {
+        manager.update(cx, |manager, cx| {
+            if manager.current_path() != target
+                && let Err(error) = manager.navigate(&target, cx)
+            {
+                eprintln!("{error}");
+            }
+        });
     }
 }
 

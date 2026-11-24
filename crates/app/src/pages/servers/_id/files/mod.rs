@@ -1,0 +1,52 @@
+use gpui::{Context, IntoElement, Window, div, prelude::*};
+use gpui_pages::{Page, PageAnimation, PageOptions, router};
+
+use crate::views::AppViews;
+
+pub struct ServerFilesPage {
+    refreshed_id: Option<String>,
+}
+
+impl Page for ServerFilesPage {
+    fn new(cx: &mut Context<Self>) -> Self {
+        AppViews::init(cx);
+        Self { refreshed_id: None }
+    }
+
+    fn options() -> PageOptions {
+        PageOptions::default().on_open(PageAnimation::Fade)
+    }
+
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let server_id =
+            router(window, cx).and_then(|manager| manager.read(cx).param("id").map(str::to_owned));
+        let screen = server_id.as_deref().and_then(|id| {
+            cx.try_global::<AppViews>()
+                .and_then(|views| views.servers.read(cx).screen(id))
+        });
+
+        let Some(screen) = screen else {
+            return div().flex_1().into_any_element();
+        };
+
+        if let Some(id) = server_id
+            && self.refreshed_id.as_deref() != Some(id.as_str())
+        {
+            self.refreshed_id = Some(id);
+            let refresh_screen = screen.clone();
+            window.defer(cx, move |_, cx| {
+                refresh_screen.update(cx, |this, cx| this.refresh_files(cx));
+            });
+        }
+
+        let files = screen.read(cx).files.clone();
+        div()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .min_w_0()
+            .child(files)
+            .into_any_element()
+    }
+}

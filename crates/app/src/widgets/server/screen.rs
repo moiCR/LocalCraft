@@ -3,7 +3,7 @@ use super::files_view::FilesView;
 use super::logs_view::LogsView;
 use crate::modals::server_settings::{ServerSettings, SettingsEvent};
 use gpui::BorrowAppContext;
-use gpui::{AppContext, Context, Entity, EventEmitter, Subscription};
+use gpui::{AppContext, Context, Entity, Subscription};
 use services::{
     AppState,
     instance::{ServerEvent, ServerInstance},
@@ -18,16 +18,6 @@ pub enum Operation {
     Restart,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ServerSection {
-    Console,
-    Logs,
-    Files,
-}
-
-pub struct Back;
-impl EventEmitter<Back> for ServerScreen {}
-
 enum Update {
     State(bool),
     Event(ServerEvent, bool),
@@ -38,7 +28,6 @@ pub struct ServerScreen {
     pub console: Entity<ConsoleView>,
     pub logs: Entity<LogsView>,
     pub files: Entity<FilesView>,
-    pub section: ServerSection,
     pub running: bool,
     pub busy: bool,
     pub status: Option<String>,
@@ -116,7 +105,6 @@ impl ServerScreen {
             console,
             logs,
             files,
-            section: ServerSection::Console,
             running: false,
             busy: false,
             status: None,
@@ -133,18 +121,12 @@ impl ServerScreen {
             .update(cx, |console, cx| console.set_snapshot(&snapshot, cx));
     }
 
-    pub fn change_section(&mut self, section: ServerSection, cx: &mut Context<Self>) {
-        if self.section == section {
-            return;
-        }
-        self.section = section;
-        if section == ServerSection::Logs {
-            self.logs.update(cx, |logs, cx| logs.refresh(cx));
-        }
-        if section == ServerSection::Files {
-            self.files.update(cx, |files, cx| files.refresh(cx));
-        }
-        cx.notify();
+    pub fn refresh_logs(&mut self, cx: &mut Context<Self>) {
+        self.logs.update(cx, |logs, cx| logs.refresh(cx));
+    }
+
+    pub fn refresh_files(&mut self, cx: &mut Context<Self>) {
+        self.files.update(cx, |files, cx| files.refresh(cx));
     }
 
     pub fn operate(&mut self, operation: Operation, cx: &mut Context<Self>) {

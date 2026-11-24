@@ -9,10 +9,7 @@ use ui::{
 use crate::{
     modals::{CreateServerModal, SettingsModalState, SettingsTab},
     views::AppViews,
-    widgets::{
-        server::screen::ServerSection,
-        updater::{AppUpdater, UpdateStatus},
-    },
+    widgets::updater::{AppUpdater, UpdateStatus},
 };
 
 #[derive(IntoElement)]
@@ -33,20 +30,22 @@ impl Default for Titlebar {
 impl RenderOnce for Titlebar {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let palette = cx.ui_palette();
-        let current_path = router(window, cx)
-            .map(|manager| manager.read(cx).current_path().to_owned())
-            .unwrap_or_else(|| "/".to_owned());
+        let (current_path, server_id) = router(window, cx)
+            .map(|manager| {
+                let manager = manager.read(cx);
+                (
+                    manager.current_path().to_owned(),
+                    manager.param("id").map(str::to_owned),
+                )
+            })
+            .unwrap_or_else(|| ("/".to_owned(), None));
 
-        let servers_entity = cx
-            .try_global::<AppViews>()
-            .map(|views| views.servers.clone());
-        let active_screen = if current_path == "/" {
-            servers_entity
-                .as_ref()
-                .and_then(|entity| entity.read(cx).active_screen())
-        } else {
-            None
-        };
+        let active_server = server_id.and_then(|id| {
+            let screen = cx
+                .try_global::<AppViews>()
+                .and_then(|views| views.servers.read(cx).screen(&id))?;
+            Some((id, screen))
+        });
 
         let update_badge = cx.try_global::<AppUpdater>().and_then(|app_updater| {
             let updater = app_updater.0.read(cx);
@@ -63,12 +62,11 @@ impl RenderOnce for Titlebar {
             }
         });
 
-        let (left_controls, center_switcher, right_action) = if let Some(screen) =
-            active_screen.clone()
+        let (left_controls, center_switcher, right_action) = if let Some((id, screen)) =
+            active_server
         {
             let server = screen.read(cx);
             let server_name = server.server.name.clone();
-            let active_section = server.section;
             let busy = server.busy;
             let running = server.running;
             let status_color = if busy {
@@ -79,7 +77,6 @@ impl RenderOnce for Titlebar {
                 palette.muted
             };
 
-            let back_entity = servers_entity.clone();
             let left = div()
                 .flex()
                 .items_center()
@@ -90,9 +87,15 @@ impl RenderOnce for Titlebar {
                 .child(
                     IconButton::new("back-to-servers", "icons/chevron-left.svg")
                         .tooltip("Back to servers")
-                        .on_click(move |_, _, cx| {
-                            if let Some(entity) = back_entity.as_ref() {
-                                entity.update(cx, |this, cx| this.close_active_server(cx));
+                        .on_click(|_, window, cx| {
+                            if let Some(manager) = router(window, cx) {
+                                manager.update(cx, |manager, cx| {
+                                    if manager.current_path() != "/"
+                                        && let Err(error) = manager.navigate("/", cx)
+                                    {
+                                        eprintln!("{error}");
+                                    }
+                                });
                             }
                         }),
                 )
@@ -116,22 +119,28 @@ impl RenderOnce for Titlebar {
                 .into_any_element();
 
             let tabs = [
-                (ServerSection::Console, "server-tab-console", "Console"),
-                (ServerSection::Logs, "server-tab-logs", "Logs"),
-                (ServerSection::Files, "server-tab-files", "Files"),
+                ("server-tab-console", "Console", format!("/servers/{id}")),
+                ("server-tab-logs", "Logs", format!("/servers/{id}/logs")),
+                ("server-tab-files", "Files", format!("/servers/{id}/files")),
             ];
 
             let center = div()
                 .flex()
                 .items_center()
                 .gap_1()
-                .children(tabs.into_iter().map(|(section, id, label)| {
-                    let screen_target = screen.clone();
-                    switcher_tab(id, label, active_section == section, &palette).on_click(
-                        move |_, _, cx| {
-                            screen_target.update(cx, |this, cx| this.change_section(section, cx));
-                        },
-                    )
+                .children(tabs.into_iter().map(|(tab_id, label, target_path)| {
+                    let active = current_path == target_path;
+                    switcher_tab(tab_id, label, active, &palette).on_click(move |_, window, cx| {
+                        if let Some(manager) = router(window, cx) {
+                            manager.update(cx, |manager, cx| {
+                                if manager.current_path() != target_path
+                                    && let Err(error) = manager.navigate(&target_path, cx)
+                                {
+                                    eprintln!("{error}");
+                                }
+                            });
+                        }
+                    })
                 }))
                 .into_any_element();
 
