@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use gpui::{App, AppContext, Context, Entity, Global, Subscription, Window};
+use gpui::{App, AppContext, BorrowAppContext, Context, Entity, Global, Subscription, Window};
 use gpui_pages::router;
 use services::{AppState, instance::ServerInstance};
 
