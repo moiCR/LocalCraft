@@ -92,9 +92,9 @@ pub fn sync_component_theme(appearance: Appearance, cx: &mut App) {
     ComponentTheme::change(mode, None, cx);
 
     let primary_hover = if mode.is_dark() {
-        palette.primary.border
+        rgb(0xd4d4d4)
     } else {
-        rgb(0x217545)
+        rgb(0x2a2a2a)
     };
 
     ComponentTheme::update(cx, |theme| {
