@@ -207,11 +207,14 @@ impl PageLayout for ServerLayout {
             }))
             .child(
                 div()
+                    .relative()
                     .flex()
                     .flex_col()
                     .flex_1()
+                    .w_full()
                     .min_h_0()
                     .min_w_0()
+                    .overflow_hidden()
                     .child(self.child.clone()),
             )
             .when_some(settings, |element, settings| element.child(settings))

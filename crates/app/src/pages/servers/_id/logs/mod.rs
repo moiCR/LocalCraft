@@ -26,7 +26,7 @@ impl Page for ServerLogsPage {
         });
 
         let Some(screen) = screen else {
-            return div().flex_1().into_any_element();
+            return div().size_full().into_any_element();
         };
 
         if let Some(id) = server_id
@@ -41,9 +41,9 @@ impl Page for ServerLogsPage {
 
         let logs = screen.read(cx).logs.clone();
         div()
+            .size_full()
             .flex()
             .flex_col()
-            .flex_1()
             .min_h_0()
             .min_w_0()
             .child(logs)
